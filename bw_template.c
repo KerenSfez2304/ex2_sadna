@@ -856,11 +856,11 @@ int main(int argc, char *argv[])
         }
       printf ("Client Done.\n");
     } else {
-      for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
+      for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
           ctx->size = size;
           // start warm up
-          for(size_t i = MSG_INIT_SIZE; i <= 5000 ; i++)
+          for(size_t i = 1; i <= 5000 ; i++)
             {
               pp_post_recv (ctx, 1);
               if ((i != 0) && (i % tx_depth == 0))
@@ -869,22 +869,29 @@ int main(int argc, char *argv[])
           // end warm up
           fprintf (stdout, "___END WARM UP___\n");
 
-          for(size_t rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
+          for(size_t j = MSG_INIT_SIZE; j <= iters ; j++)
             {
-              if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
-                  fprintf(stderr, "Server couldn't receive message\n");
+              if (pp_post_recv (ctx, rx_depth)) {
+                  fprintf (stderr, "Client couldn't receive message\n");
                   return 1;
                 }
-              if(rcv_msg % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              if ((j != 0) && (j % tx_depth == 0))
+                pp_wait_completions(ctx, rx_depth);
+//              if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
+//                  fprintf(stderr, "Server couldn't receive message\n");
+//                  return 1;
+//                }
+//              if(rcv_msg % tx_depth == 0)
+//                pp_wait_completions(ctx,rx_depth);
             }
           //size now is 1 for just 1 ack
-          ctx->size = MSG_INIT_SIZE;
+          ctx->size = 1;
           // send ack
           pp_post_send(ctx);
           // wait for the send ack
-          pp_wait_completions(ctx,MSG_ITER_ONE);
+          pp_wait_completions(ctx,1);
         }
+      printf("Server Done.\n");
     }
 
   ibv_free_device_list(dev_list);
