@@ -821,17 +821,14 @@ int main(int argc, char *argv[])
         {
           ctx->size = message_size;
           //WARM
-          for(size_t sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= 5000; sent_warm_up++)
+          for(size_t i = MSG_INIT_SIZE ; i <= 5000; i++)
             {
-//              pp_post_send(ctx);
-//              if(sent_warm_up % tx_depth == 0)
-//                pp_wait_completions(ctx,rx_depth);
               if (pp_post_send (ctx))
                 {
                   fprintf (stderr, "Client couldn't post send\n");
                   return 1;
                 }
-              if ((sent_warm_up != 0) && (sent_warm_up % tx_depth == 0))
+              if ((i != 0) && (i % tx_depth == 0))
                 {
                   pp_wait_completions (ctx, tx_depth);
                 }
@@ -839,11 +836,21 @@ int main(int argc, char *argv[])
           //END WARM
           clock_t start_time = clock ();
 
-          for(size_t sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
+          for(size_t i = MSG_INIT_SIZE; i <= iters; i++)
             {
-              pp_post_send(ctx);
-              if(sent_msg % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+//              pp_post_send(ctx);
+//              if(sent_msg % tx_depth == 0)
+//                pp_wait_completions(ctx,rx_depth);
+              int result = pp_post_send (ctx);
+              if (result)
+                {
+                  fprintf (stderr, "Client couldn't post send\n");
+                  return 1;
+                }
+              if ((i != 0) && (i % tx_depth == 0))
+                {
+                  pp_wait_completions (ctx, tx_depth);
+                }
             }
           pp_post_recv(ctx,MSG_INIT_SIZE);
           pp_wait_completions(ctx,MSG_INIT_SIZE);
