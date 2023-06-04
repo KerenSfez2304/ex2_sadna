@@ -821,7 +821,7 @@ int main(int argc, char *argv[])
     if (pp_connect_ctx(ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
       return 1;
 
-  if (servername) { // client
+  if (servername) {
       //client code
       for(unsigned long int message_size = 1; message_size <= size ;message_size *= 2)
         {
@@ -851,34 +851,31 @@ int main(int argc, char *argv[])
           printf("%lu %f %s\n",message_size, throughput, "Bytes/microseconds");
         }
     } else {
-      for (size_t message_size = 1; message_size <= size; message_size*=2)
+      for(unsigned long int message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
         {
-          ctx->size = message_size;
-          // start warm up
-          for(size_t i = 0; i < 5000 ; i++) {
-              pp_post_recv (ctx, 1);
-              if ((i != 0) && (i % tx_depth == 0))
-                pp_wait_completions(ctx, rx_depth);
+          ctx->size = size;
+          for(unsigned long int receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= 5000 ; receive_warm_up++)
+            {
+              pp_post_recv(ctx, MSG_ITER_ONE);
+              if(receive_warm_up % tx_depth == 0)
+                pp_wait_completions(ctx,rx_depth);
             }
-          // end warm up
-          fprintf (stdout, "___END WARM UP___\n");
-
-          // start body
-          for (size_t j = 0; j < iters; j ++) {
-//              pp_post_recv (ctx, rx_depth);
-              if(pp_post_recv(ctx,1) != 1){
+          for(unsigned long int rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
+            {
+              if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
                   fprintf(stderr, "Server couldn't receive message\n");
                   return 1;
                 }
-              if ((j != 0) && (j % tx_depth == 0))
-                pp_wait_completions(ctx, rx_depth);
+              if(rcv_msg % tx_depth == 0)
+                pp_wait_completions(ctx,rx_depth);
             }
-          // end body
-          ctx->size = 1;
-          pp_post_send (ctx);
-          pp_wait_completions (ctx, 1);
+          //size now is 1 for just 1 ack
+          ctx->size = MSG_INIT_SIZE;
+          // send ack
+          pp_post_send(ctx);
+          // wait for the send ack
+          pp_wait_completions(ctx,MSG_ITER_ONE);
         }
-      printf("Server Done.\n");
     }
 
   ibv_free_device_list(dev_list);
