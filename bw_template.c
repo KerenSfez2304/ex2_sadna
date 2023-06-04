@@ -828,9 +828,8 @@ int main(int argc, char *argv[])
                 pp_wait_completions(ctx,rx_depth);
             }
           //END WARM
-          struct timeval start, end;
-          double duration , throughput;
-          gettimeofday(&start, NULL);
+          clock_t start_time = clock ();
+
           for(size_t sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
             {
               pp_post_send(ctx);
@@ -839,10 +838,8 @@ int main(int argc, char *argv[])
             }
           pp_post_recv(ctx,MSG_INIT_SIZE);
           pp_wait_completions(ctx,MSG_INIT_SIZE);
-          gettimeofday(&end, NULL);
-          duration = (double) (end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec);
-          throughput = (double)(iters * message_size) / duration;
-          printf("%lu %f %s\n",message_size, throughput, "Bytes/microseconds");
+          clock_t end_time = clock ();
+          printf ("%ld\t%Lf\t%s\n", message_size, compute_throughput (iters, message_size, start_time, end_time), "bytes/microseconds");
         }
     } else {
       for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
