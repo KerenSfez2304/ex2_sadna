@@ -821,7 +821,7 @@ int main(int argc, char *argv[])
         {
           ctx->size = message_size;
           //WARM
-          for(size_t i = MSG_INIT_SIZE ; i <= 5000; i++)
+          for(size_t i = 1 ; i <= 5000; i++)
             {
               if (pp_post_send (ctx))
                 {
@@ -836,7 +836,7 @@ int main(int argc, char *argv[])
           //END WARM
           clock_t start_time = clock ();
 
-          for(size_t i = MSG_INIT_SIZE; i <= iters; i++)
+          for(size_t i = 1; i <= iters; i++)
             {
               int result = pp_post_send (ctx);
               if (result)
@@ -849,20 +849,21 @@ int main(int argc, char *argv[])
                   pp_wait_completions (ctx, rx_depth);
                 }
             }
-          pp_post_recv(ctx,MSG_INIT_SIZE);
-          pp_wait_completions(ctx,MSG_INIT_SIZE);
+          pp_post_recv(ctx,1);
+          pp_wait_completions(ctx,1);
           clock_t end_time = clock ();
           printf ("%ld\t%Lf\t%s\n", message_size, compute_throughput (iters, message_size, start_time, end_time), "bytes/microseconds");
         }
+      printf ("Client Done.\n");
     } else {
       for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
         {
           ctx->size = size;
-          for(size_t receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= 5000 ; receive_warm_up++)
+          for(size_t i = MSG_INIT_SIZE; i <= 5000 ; i++)
             {
-              pp_post_recv(ctx,MSG_ITER_ONE);
-              if(receive_warm_up % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              pp_post_recv (ctx, 1);
+              if ((i != 0) && (i % tx_depth == 0))
+                pp_wait_completions(ctx, rx_depth);
             }
           for(size_t rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
             {
