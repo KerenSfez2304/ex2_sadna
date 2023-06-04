@@ -859,12 +859,16 @@ int main(int argc, char *argv[])
       for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
         {
           ctx->size = size;
+          // start warm up
           for(size_t i = MSG_INIT_SIZE; i <= 5000 ; i++)
             {
               pp_post_recv (ctx, 1);
               if ((i != 0) && (i % tx_depth == 0))
                 pp_wait_completions(ctx, rx_depth);
             }
+          // end warm up
+          fprintf (stdout, "___END WARM UP___\n");
+
           for(size_t rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
             {
               if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
