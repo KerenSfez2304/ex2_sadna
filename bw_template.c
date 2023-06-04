@@ -45,14 +45,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <time.h>
-
 #include <infiniband/verbs.h>
 
 #define WC_BATCH (1)
-#define ALL_MESSAGES_SIZE (1048576L)
-#define NUM_SEND_MSG 1
-#define MSG_INIT_SIZE 1
-#define MSG_ITER_ONE 1
+
 enum {
     PINGPONG_RECV_WRID = 1,
     PINGPONG_SEND_WRID = 2,
@@ -94,6 +90,7 @@ enum ibv_mtu pp_mtu_to_enum(int mtu)
     }
 }
 
+static const int WARM_UP_ITERS = 5000;
 uint16_t pp_get_local_lid(struct ibv_context *context, int port)
 {
   struct ibv_port_attr attr;
@@ -636,7 +633,7 @@ int main(int argc, char *argv[])
   int                      tx_depth = 100;
   int                      iters = 10000;
   int                      use_event = 0;
-  int                      size = ALL_MESSAGES_SIZE;
+  int                      size = 1048576L;
   int                      sl = 0;
   int                      gidx = -1;
   char                     gid[33];
@@ -816,12 +813,11 @@ int main(int argc, char *argv[])
       return 1;
 
   if (servername) {
-      //client code
       for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
           ctx->size = message_size;
           //WARM
-          for(size_t i = 1 ; i <= 5000; i++)
+          for(size_t i = 1 ; i <= WARM_UP_ITERS; i++)
             {
               if (pp_post_send (ctx))
                 {
@@ -834,8 +830,9 @@ int main(int argc, char *argv[])
                 }
             }
           //END WARM
-          clock_t start_time = clock ();
 
+          // start measurement
+          clock_t start_time = clock ();
           for(size_t i = 1; i <= iters; i++)
             {
               int result = pp_post_send (ctx);
@@ -852,6 +849,7 @@ int main(int argc, char *argv[])
           pp_post_recv(ctx,1);
           pp_wait_completions(ctx,1);
           clock_t end_time = clock ();
+          // end measurement
           printf ("%ld\t%Lf\t%s\n", message_size, compute_throughput (iters, message_size, start_time, end_time), "bytes/microseconds");
         }
       printf ("Client Done.\n");
@@ -860,16 +858,16 @@ int main(int argc, char *argv[])
         {
           ctx->size = size;
           // start warm up
-          for(size_t i = 1; i <= 5000 ; i++)
+          for(size_t i = 1; i <= WARM_UP_ITERS; i++)
             {
               pp_post_recv (ctx, 1);
               if ((i != 0) && (i % tx_depth == 0))
                 pp_wait_completions(ctx, rx_depth);
             }
           // end warm up
-          fprintf (stdout, "___END WARM UP___\n");
 
-          for(size_t j = MSG_INIT_SIZE; j <= iters ; j++)
+          // start body
+          for(size_t j = 1; j <= iters ; j++)
             {
               if(pp_post_recv(ctx,1) != 1){
                   fprintf(stderr, "Server couldn't receive message\n");
@@ -878,14 +876,10 @@ int main(int argc, char *argv[])
               if ((j != 0) && (j % tx_depth == 0))
                 pp_wait_completions(ctx, rx_depth);
 
-//              if(rcv_msg % tx_depth == 0)
-//                pp_wait_completions(ctx,rx_depth);
             }
-          //size now is 1 for just 1 ack
+          // end body
           ctx->size = 1;
-          // send ack
           pp_post_send(ctx);
-          // wait for the send ack
           pp_wait_completions(ctx,1);
         }
       printf("Server Done.\n");
