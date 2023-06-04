@@ -823,9 +823,18 @@ int main(int argc, char *argv[])
           //WARM
           for(size_t sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= 5000; sent_warm_up++)
             {
-              pp_post_send(ctx);
-              if(sent_warm_up % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+//              pp_post_send(ctx);
+//              if(sent_warm_up % tx_depth == 0)
+//                pp_wait_completions(ctx,rx_depth);
+              if (pp_post_send (ctx))
+                {
+                  fprintf (stderr, "Client couldn't post send\n");
+                  return 1;
+                }
+              if ((sent_warm_up != 0) && (sent_warm_up % tx_depth == 0))
+                {
+                  pp_wait_completions (ctx, tx_depth);
+                }
             }
           //END WARM
           clock_t start_time = clock ();
