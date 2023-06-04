@@ -48,13 +48,11 @@
 
 #include <infiniband/verbs.h>
 
-#define WC_BATCH (10)
-// todo: delete this
+#define WC_BATCH (1)
 #define ALL_MESSAGES_SIZE (1048576L)
 #define NUM_SEND_MSG 1
 #define MSG_INIT_SIZE 1
 #define MSG_ITER_ONE 1
-//
 enum {
     PINGPONG_RECV_WRID = 1,
     PINGPONG_SEND_WRID = 2,
@@ -71,7 +69,7 @@ struct pingpong_context {
     struct ibv_cq		*cq;
     struct ibv_qp		*qp;
     void			*buf;
-    long int				size;
+    unsigned long int				size;
     int				rx_depth;
     int				routs;
     struct ibv_port_attr	portinfo;
@@ -111,8 +109,6 @@ int pp_get_port_info(struct ibv_context *context, int port,
 {
   return ibv_query_port(context, port, attr);
 }
-
-
 
 void wire_gid_to_gid(const char *wgid, union ibv_gid *gid)
 {
@@ -463,13 +459,6 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
   return ctx;
 }
 
-long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
-{
-  long double diff_time = (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
-  long double throughput = iters * message_size / diff_time;
-  return throughput;
-}
-
 int pp_close_ctx(struct pingpong_context *ctx)
 {
   if (ibv_destroy_qp(ctx->qp)) {
@@ -525,11 +514,11 @@ static int pp_post_recv(struct pingpong_context *ctx, int n)
   };
   struct ibv_recv_wr *bad_wr;
   int i;
-
   for (i = 0; i < n; ++i)
-    if (ibv_post_recv(ctx->qp, &wr, &bad_wr))
-      break;
-
+    if (ibv_post_recv(ctx->qp, &wr, &bad_wr)) {
+        printf("%d", i);
+        break;
+      }
   return i;
 }
 
@@ -549,10 +538,8 @@ static int pp_post_send(struct pingpong_context *ctx)
       .send_flags = IBV_SEND_SIGNALED,
       .next       = NULL
   };
-
   return ibv_post_send(ctx->qp, &wr, &bad_wr);
 }
-
 
 int pp_wait_completions(struct pingpong_context *ctx, int iters)
 {
@@ -584,16 +571,16 @@ int pp_wait_completions(struct pingpong_context *ctx, int iters)
               break;
 
               case PINGPONG_RECV_WRID:
-                if (--ctx->routs <= 10) {
-                    ctx->routs += pp_post_recv(ctx, ctx->rx_depth - ctx->routs);
-                    if (ctx->routs < ctx->rx_depth) {
-                        fprintf(stderr,
-                                "Couldn't post receive (%d)\n",
-                                ctx->routs);
-                        return 1;
-                      }
-                  }
-              ++rcnt;
+//                    if (--ctx->routs <= 10) {
+//                        ctx->routs += pp_post_recv(ctx, ctx->rx_depth - ctx->routs);
+//                        if (ctx->routs < ctx->rx_depth) {
+//                            fprintf(stderr,
+//                                    "Couldn't post receive (%d)\n",
+//                                    ctx->routs);
+//                            return 1;
+//                        }
+//                    }
+                ++rcnt;
               break;
 
               default:
@@ -640,9 +627,9 @@ int main(int argc, char *argv[])
   enum ibv_mtu             mtu = IBV_MTU_2048;
   int                      rx_depth = 100;
   int                      tx_depth = 100;
-  int                      iters = 1000;
+  int                      iters = 10000;
   int                      use_event = 0;
-  int                      size = 1048576L;
+  int                      size = ALL_MESSAGES_SIZE;
   int                      sl = 0;
   int                      gidx = -1;
   char                     gid[33];
@@ -856,7 +843,7 @@ int main(int argc, char *argv[])
           ctx->size = size;
           for(unsigned long int receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= 5000 ; receive_warm_up++)
             {
-              pp_post_recv(ctx, MSG_ITER_ONE);
+              pp_post_recv(ctx,MSG_ITER_ONE);
               if(receive_warm_up % tx_depth == 0)
                 pp_wait_completions(ctx,rx_depth);
             }
@@ -877,9 +864,7 @@ int main(int argc, char *argv[])
           pp_wait_completions(ctx,MSG_ITER_ONE);
         }
     }
-
   ibv_free_device_list(dev_list);
   free(rem_dest);
   return 0;
 }
-
