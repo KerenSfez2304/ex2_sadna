@@ -835,30 +835,20 @@ int main(int argc, char *argv[])
             }
           //END WARM
           clock_t start_time = clock ();
-          for (size_t j = 0; j < iters; j += tx_depth)
-          {
-            fprintf (stdout, "___j: %d___\n", j);
-            for (size_t i = 0; i < tx_depth; i++) {
-                fprintf (stdout, "_____i: %d_____\n", i);
-                int result = pp_post_send (ctx);
-                if (result)
-                  {
-                    fprintf(stdout, "%d\n", result);
-                    fprintf (stderr, "Client couldn't post send\n");
-                    return 1;
-                  }
-                if ((i != 0) && (i % tx_depth == 0))
-                  {
-                    pp_wait_completions (ctx, tx_depth);
-                  }
-              }
-          }
-//          for(size_t sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
-//            {
-//              pp_post_send(ctx);
-//              if(sent_msg % tx_depth == 0)
-//                pp_wait_completions(ctx,rx_depth);
-//            }
+
+          for(size_t i = MSG_INIT_SIZE; i <= iters; i++)
+            {
+              int result = pp_post_send (ctx);
+              if (result)
+                {
+                  fprintf (stderr, "Client couldn't post send\n");
+                  return 1;
+                }
+              if ((i != 0) && (i % tx_depth == 0))
+                {
+                  pp_wait_completions (ctx, rx_depth);
+                }
+            }
           pp_post_recv(ctx,MSG_INIT_SIZE);
           pp_wait_completions(ctx,MSG_INIT_SIZE);
           clock_t end_time = clock ();
