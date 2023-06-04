@@ -871,16 +871,13 @@ int main(int argc, char *argv[])
 
           for(size_t j = MSG_INIT_SIZE; j <= iters ; j++)
             {
-              if (pp_post_recv (ctx, rx_depth)) {
-                  fprintf (stderr, "Client couldn't receive message\n");
+              if(pp_post_recv(ctx,1) != 1){
+                  fprintf(stderr, "Server couldn't receive message\n");
                   return 1;
                 }
               if ((j != 0) && (j % tx_depth == 0))
                 pp_wait_completions(ctx, rx_depth);
-//              if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
-//                  fprintf(stderr, "Server couldn't receive message\n");
-//                  return 1;
-//                }
+
 //              if(rcv_msg % tx_depth == 0)
 //                pp_wait_completions(ctx,rx_depth);
             }
