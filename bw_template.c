@@ -49,11 +49,8 @@
 #include <infiniband/verbs.h>
 
 #define WC_BATCH (1)
-#define ALL_MESSAGES_SIZE (1048576L)
-#define NUM_SEND_MSG 1
-#define MSG_INIT_SIZE 1
-#define MSG_ITER_ONE 1
-#define WARM_UP_ITER 6000
+#define ITER_WARM_UP 6000
+
 enum {
     PINGPONG_RECV_WRID = 1,
     PINGPONG_SEND_WRID = 2,
@@ -632,11 +629,11 @@ int main(int argc, char *argv[])
   int                      port = 12345;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
-  int                      rx_depth = 7000;
-  int                      tx_depth = 7000;
+  int                      rx_depth = 6000;
+  int                      tx_depth = 6000;
   int                      iters = 60000;
   int                      use_event = 0;
-  int                      size = ALL_MESSAGES_SIZE;
+  int                      size = 1048576L;
   int                      sl = 0;
   int                      gidx = -1;
   char                     gid[33];
@@ -820,7 +817,7 @@ int main(int argc, char *argv[])
         {
           ctx->size = message_size;
           // START WARM UP
-          for(size_t i = 1 ; i <= WARM_UP_ITER; i++)
+          for(size_t i = 1 ; i <= ITER_WARM_UP; i++)
             {
               if (pp_post_send (ctx)) {
                   fprintf (stderr, "Client couldn't post send\n");
@@ -858,7 +855,7 @@ int main(int argc, char *argv[])
         {
           ctx->size = size;
           // START WARM UP
-          for(size_t i = 1; i <= WARM_UP_ITER ; i++)
+          for(size_t i = 1; i <= ITER_WARM_UP ; i++)
             {
               pp_post_recv (ctx, 1);
               if ((i != 0) && (i % tx_depth == 0)) {
