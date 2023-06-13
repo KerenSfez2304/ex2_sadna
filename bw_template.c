@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
   struct pingpong_dest    *rem_dest;
   char                    *ib_devname = NULL;
   char                    *servername;
-  int                      port = 12350;
+  int                      port = 12345;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
   int                      rx_depth = 6000;
@@ -816,7 +816,6 @@ int main(int argc, char *argv[])
       return 1;
 
   if (servername) {
-      //client code
       for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
           ctx->size = message_size;
@@ -885,7 +884,7 @@ int main(int argc, char *argv[])
           // END BODY
         }
     }
-  // free resources
+
   ibv_free_device_list(dev_list);
   free(rem_dest);
   return 0;
