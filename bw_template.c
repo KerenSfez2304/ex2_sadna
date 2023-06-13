@@ -460,6 +460,13 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
   return ctx;
 }
 
+long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
+{
+  long double diff_time = (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
+  long double throughput = iters * message_size / diff_time;
+  return throughput;
+}
+
 int pp_close_ctx(struct pingpong_context *ctx)
 {
   if (ibv_destroy_qp(ctx->qp)) {
