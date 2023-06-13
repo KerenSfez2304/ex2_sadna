@@ -626,12 +626,12 @@ int main(int argc, char *argv[])
   struct pingpong_dest    *rem_dest;
   char                    *ib_devname = NULL;
   char                    *servername;
-  int                      port = 12350;
+  int                      port = 12345;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
-  int                      rx_depth = 6000;
-  int                      tx_depth = 6000;
-  int                      iters = 60000;
+  int                      rx_depth = 100;
+  int                      tx_depth = 100;
+  int                      iters = 50000;
   int                      use_event = 0;
   int                      size = 1048576L;
   int                      sl = 0;
