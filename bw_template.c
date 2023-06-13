@@ -868,23 +868,21 @@ int main(int argc, char *argv[])
             }
           // END WARM UP
 
-          // Receive messages one by one
-          for(size_t rcv_msg = 1; rcv_msg <= iters ; rcv_msg++)
+          // START BODY
+          for(size_t j = 1; j <= iters ; j++)
             {
-              if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
+              if(pp_post_recv(ctx,1) != 1){
                   fprintf(stderr, "Server couldn't receive message\n");
                   return 1;
                 }
-              // If queue full, wait rx_depth that the queue is empty.
-              if(rcv_msg % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              if ((j != 0) && (j % tx_depth == 0)) {
+                  pp_wait_completions(ctx, rx_depth);
+                }
             }
-          //size now is 1 for just 1 ack
           ctx->size = 1;
-          // send ack
           pp_post_send(ctx);
-          // Wait to empty the queue
-          pp_wait_completions(ctx,MSG_ITER_ONE);
+          pp_wait_completions(ctx, 1);
+          // END BODY
         }
     }
   // free resources
