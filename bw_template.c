@@ -833,10 +833,8 @@ int main(int argc, char *argv[])
             }
           // End of Warm up
           // Start timer
-          struct timeval start, end;
-          double duration , throughput;
-          gettimeofday(&start, NULL);
-          // Start send messages and calculates throughput on the end
+
+          clock_t start_time = clock ();
           for(size_t i = 1; i <= iters; i++)
             {
               int result = pp_post_send (ctx);
@@ -850,15 +848,11 @@ int main(int argc, char *argv[])
                   pp_wait_completions (ctx, rx_depth);
                 }
             }
-          // Wait to receive the ack message
           pp_post_recv(ctx,1);
-          // Wait to empty the queue
           pp_wait_completions(ctx,1);
-          gettimeofday(&end, NULL);
-          // calculate throughput for each message size
-          duration = (double) (end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec);
-          throughput = (double)(iters * message_size) / duration;
-          printf("%lu %f %s\n",message_size, throughput, "Bytes/microseconds");
+          clock_t end_time = clock ();
+          // end measurement
+          printf ("%ld\t%Lf\t%s\n", message_size, compute_throughput (iters, message_size, start_time, end_time), "bytes/microseconds");
         }
     } else {
       for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
