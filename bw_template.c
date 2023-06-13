@@ -837,17 +837,23 @@ int main(int argc, char *argv[])
           double duration , throughput;
           gettimeofday(&start, NULL);
           // Start send messages and calculates throughput on the end
-          for(size_t sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
+          for(size_t i = 1; i <= iters; i++)
             {
-              pp_post_send(ctx);
-              // If queue full, wait rx_depth that the queue is empty.
-              if(sent_msg % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              int result = pp_post_send (ctx);
+              if (result)
+                {
+                  fprintf (stderr, "Client couldn't post send\n");
+                  return 1;
+                }
+              if ((i != 0) && (i % tx_depth == 0))
+                {
+                  pp_wait_completions (ctx, rx_depth);
+                }
             }
           // Wait to receive the ack message
-          pp_post_recv(ctx,MSG_INIT_SIZE);
+          pp_post_recv(ctx,1);
           // Wait to empty the queue
-          pp_wait_completions(ctx,MSG_INIT_SIZE);
+          pp_wait_completions(ctx,1);
           gettimeofday(&end, NULL);
           // calculate throughput for each message size
           duration = (double) (end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec);
