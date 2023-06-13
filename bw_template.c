@@ -70,7 +70,7 @@ struct pingpong_context {
     struct ibv_cq		*cq;
     struct ibv_qp		*qp;
     void			*buf;
-    unsigned long int				size;
+    size_t				size;
     int				rx_depth;
     int				routs;
     struct ibv_port_attr	portinfo;
@@ -460,6 +460,13 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
   return ctx;
 }
 
+long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
+{
+  long double diff_time = (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
+  long double throughput = iters * message_size / diff_time;
+  return throughput;
+}
+
 int pp_close_ctx(struct pingpong_context *ctx)
 {
   if (ibv_destroy_qp(ctx->qp)) {
@@ -811,11 +818,10 @@ int main(int argc, char *argv[])
 
   if (servername) {
       //client code
-      for(unsigned long int message_size = 1; message_size <= size ;message_size *= 2)
+      for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
-          ctx->size = message_size;
           // Send Warm up message
-          for(unsigned long int sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= WARM_UP_ITER; sent_warm_up++)
+          for(size_t sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= WARM_UP_ITER; sent_warm_up++)
             {
               pp_post_send(ctx);
               // If queue full, wait rx_depth that the queue is empty.
@@ -828,7 +834,7 @@ int main(int argc, char *argv[])
           double duration , throughput;
           gettimeofday(&start, NULL);
           // Start send messages and calculates throughput on the end
-          for(unsigned long int sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
+          for(size_t sent_msg = MSG_INIT_SIZE; sent_msg <= iters; sent_msg++)
             {
               pp_post_send(ctx);
               // If queue full, wait rx_depth that the queue is empty.
@@ -846,18 +852,18 @@ int main(int argc, char *argv[])
           printf("%lu %f %s\n",message_size, throughput, "Bytes/microseconds");
         }
     } else {
-      for(unsigned long int message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
+      for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
         {
           ctx->size = size;
           // Receive warm up
-          for(unsigned long int receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= WARM_UP_ITER ; receive_warm_up++)
+          for(size_t receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= WARM_UP_ITER ; receive_warm_up++)
             {
               pp_post_recv(ctx,MSG_ITER_ONE);
               if(receive_warm_up % tx_depth == 0)
                 pp_wait_completions(ctx,rx_depth);
             }
           // Receive messages one by one
-          for(unsigned long int rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
+          for(size_t rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
             {
               if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
                   fprintf(stderr, "Server couldn't receive message\n");
