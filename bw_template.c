@@ -49,7 +49,7 @@
 #include <infiniband/verbs.h>
 
 #define WC_BATCH (1)
-#define ITER_WARM_UP 6000
+#define ITER_WARM_UP 5000
 
 enum {
     PINGPONG_RECV_WRID = 1,
