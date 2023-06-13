@@ -632,8 +632,8 @@ int main(int argc, char *argv[])
   int                      port = 12345;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
-  int                      rx_depth = 6000;
-  int                      tx_depth = 6000;
+  int                      rx_depth = 7000;
+  int                      tx_depth = 7000;
   int                      iters = 60000;
   int                      use_event = 0;
   int                      size = ALL_MESSAGES_SIZE;
