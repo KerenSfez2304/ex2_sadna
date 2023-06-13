@@ -634,7 +634,7 @@ int main(int argc, char *argv[])
   enum ibv_mtu             mtu = IBV_MTU_2048;
   int                      rx_depth = 5000;
   int                      tx_depth = 5000;
-  int                      iters = 50000;
+  int                      iters = 60000;
   int                      use_event = 0;
   int                      size = ALL_MESSAGES_SIZE;
   int                      sl = 0;
