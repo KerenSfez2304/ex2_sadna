@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
   struct pingpong_dest    *rem_dest;
   char                    *ib_devname = NULL;
   char                    *servername;
-  int                      port = 12346;
+  int                      port = 12350;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
   int                      rx_depth = 6000;
