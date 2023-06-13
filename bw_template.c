@@ -855,18 +855,21 @@ int main(int argc, char *argv[])
           // END MEASUREMENT
         }
     } else {
-      for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
+      for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
           ctx->size = size;
-          // Receive warm up
-          for(size_t receive_warm_up = MSG_INIT_SIZE; receive_warm_up <= WARM_UP_ITER ; receive_warm_up++)
+          // START WARM UP
+          for(size_t i = 1; i <= WARM_UP_ITER ; i++)
             {
-              pp_post_recv(ctx,MSG_ITER_ONE);
-              if(receive_warm_up % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              pp_post_recv (ctx, 1);
+              if ((i != 0) && (i % tx_depth == 0)) {
+                  pp_wait_completions(ctx, rx_depth);
+                }
             }
+          // END WARM UP
+
           // Receive messages one by one
-          for(size_t rcv_msg = MSG_INIT_SIZE; rcv_msg <= iters ; rcv_msg++)
+          for(size_t rcv_msg = 1; rcv_msg <= iters ; rcv_msg++)
             {
               if(pp_post_recv(ctx,MSG_ITER_ONE) != NUM_SEND_MSG){
                   fprintf(stderr, "Server couldn't receive message\n");
@@ -877,7 +880,7 @@ int main(int argc, char *argv[])
                 pp_wait_completions(ctx,rx_depth);
             }
           //size now is 1 for just 1 ack
-          ctx->size = MSG_INIT_SIZE;
+          ctx->size = 1;
           // send ack
           pp_post_send(ctx);
           // Wait to empty the queue
