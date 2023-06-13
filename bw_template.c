@@ -832,7 +832,7 @@ int main(int argc, char *argv[])
                 }
               if ((i != 0) && (i % tx_depth == 0))
                 {
-                  pp_wait_completions (ctx, tx_depth);
+                  pp_wait_completions (ctx, rx_depth);
                 }
             }
           //END WARM
