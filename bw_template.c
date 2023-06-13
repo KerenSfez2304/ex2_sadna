@@ -814,7 +814,6 @@ int main(int argc, char *argv[])
   if (servername)
     if (pp_connect_ctx(ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
       return 1;
-//    printf("%s %d %s %d\n","Warm Up : ", WARM_UP_ITER, "; Iterations : ",iters);
 
   if (servername) {
       //client code
@@ -822,12 +821,15 @@ int main(int argc, char *argv[])
         {
           ctx->size = message_size;
           // Send Warm up message
-          for(size_t sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= WARM_UP_ITER; sent_warm_up++)
+          for(size_t i = 1 ; i <= WARM_UP_ITER; i++)
             {
-              pp_post_send(ctx);
-              // If queue full, wait rx_depth that the queue is empty.
-              if(sent_warm_up % tx_depth == 0)
-                pp_wait_completions(ctx,rx_depth);
+              if (pp_post_send (ctx)) {
+                  fprintf (stderr, "Client couldn't post send\n");
+                  return 1;
+                }
+              if ((i != 0) && (i % tx_depth == 0)) {
+                  pp_wait_completions (ctx, tx_depth);
+                }
             }
           // End of Warm up
           // Start timer
