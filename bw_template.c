@@ -820,6 +820,7 @@ int main(int argc, char *argv[])
       //client code
       for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
+          ctx->size = message_size;
           // Send Warm up message
           for(size_t sent_warm_up = MSG_INIT_SIZE ; sent_warm_up <= WARM_UP_ITER; sent_warm_up++)
             {
