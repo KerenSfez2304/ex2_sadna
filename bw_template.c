@@ -820,7 +820,7 @@ int main(int argc, char *argv[])
       for(size_t message_size = 1; message_size <= size ;message_size *= 2)
         {
           ctx->size = message_size;
-          // Send Warm up message
+          // START WARM UP
           for(size_t i = 1 ; i <= WARM_UP_ITER; i++)
             {
               if (pp_post_send (ctx)) {
@@ -831,9 +831,9 @@ int main(int argc, char *argv[])
                   pp_wait_completions (ctx, tx_depth);
                 }
             }
-          // End of Warm up
-          // Start timer
+          // END WARM UP
 
+          // START MEASUREMENT
           clock_t start_time = clock ();
           for(size_t i = 1; i <= iters; i++)
             {
@@ -851,8 +851,8 @@ int main(int argc, char *argv[])
           pp_post_recv(ctx,1);
           pp_wait_completions(ctx,1);
           clock_t end_time = clock ();
-          // end measurement
           printf ("%ld\t%Lf\t%s\n", message_size, compute_throughput (iters, message_size, start_time, end_time), "bytes/microseconds");
+          // END MEASUREMENT
         }
     } else {
       for(size_t message_size = MSG_INIT_SIZE; message_size <= size ;message_size *= 2)
