@@ -629,8 +629,8 @@ int main(int argc, char *argv[])
   int                      port = 12345;
   int                      ib_port = 1;
   enum ibv_mtu             mtu = IBV_MTU_2048;
-  int                      rx_depth = 100;
-  int                      tx_depth = 100;
+  int                      rx_depth = 1000;
+  int                      tx_depth = 1000;
   int                      iters = 50000;
   int                      use_event = 0;
   int                      size = 1048576L;
