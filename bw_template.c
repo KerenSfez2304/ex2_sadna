@@ -1067,19 +1067,31 @@ int kv_close(void *kv_handle) {
   return 0;
 }
 
-
-int main(int argc, char *argv[])
-{
-  char *servername;
-
-  argc_ = argc;
-  argv_ = argv;
+int get_servername(char ** servername, int argc, char **argv) {
+  argc_global = argc;
+  argv_global = argv;
   if (optind == argc - 1)
-    servername = strdup(argv[optind]);
+    *servername = strdup(argv[optind]);
   else if (optind < argc) {
       usage(argv[0]);
       return 1;
     }
+  return 0;
+}
+
+
+int main(int argc, char *argv[])
+{
+  char *servername;
+  get_servername(&servername, argc, argv);
+//  argc_ = argc;
+//  argv_ = argv;
+//  if (optind == argc - 1)
+//    servername = strdup(argv[optind]);
+//  else if (optind < argc) {
+//      usage(argv[0]);
+//      return 1;
+//    }
 
 
   void *kv_handle[NUM_CLIENT];
