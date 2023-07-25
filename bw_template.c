@@ -1068,6 +1068,8 @@ int main(int argc, char *argv[])
       return 1;
     }
   fprintf (stdout, "0");
+  fflush(stdout);
+
   void *kv_handle[NUM_CLIENT];
 
   for (int i = 0; i < NUM_CLIENT; i++) {
