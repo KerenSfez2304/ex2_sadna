@@ -1089,16 +1089,6 @@ int main(int argc, char *argv[])
     fprintf(stdout, "name error \n");
   }
 
-//  argc_ = argc;
-//  argv_ = argv;
-//  if (optind == argc - 1)
-//    servername = strdup(argv[optind]);
-//  else if (optind < argc) {
-//      usage(argv[0]);
-//      return 1;
-//    }
-
-
   struct handle *kv_handle;
   if (servername){ //client
       if (kv_open(servername, (void **) &kv_handle)){

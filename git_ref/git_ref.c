@@ -1,36 +1,3 @@
-/*
- * Copyright (c) 2005 Topspin Communications.  All rights reserved.
- * Copyright (c) 2006 Cisco Systems.  All rights reserved.
- *
- * This software is available to you under a choice of one of two
- * licenses.  You may choose to be licensed under the terms of the GNU
- * General Public License (GPL) Version 2, available from the file
- * COPYING in the main directory of this source tree, or the
- * OpenIB.org BSD license below:
- *
- *     Redistribution and use in source and binary forms, with or
- *     without modification, are permitted provided that the following
- *     conditions are met:
- *
- *      - Redistributions of source code must retain the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer.
- *
- *      - Redistributions in binary form must reproduce the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and/or other materials
- *        provided with the distribution.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,12 +15,6 @@
 
 #include <infiniband/verbs.h>
 
-#ifdef EX4
-#include <fcntl.h>
-#include <dirent.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#endif
 
 int g_argc;
 char **g_argv;
@@ -74,12 +35,6 @@ enum packet_type {
     RENDEZVOUS_SET_REQUEST,
     RENDEZVOUS_SET_RESPONSE,
 
-#ifdef EX4
-    FIND,
-    LOCATION,
-#endif
-};
-
 struct list_of_pairs{
     char* key;
     char* value;
@@ -98,9 +53,6 @@ struct packet {
 
         /* EAGER PROTOCOL PACKETS */
         struct {
-#ifdef EX4
-            unsigned value_length; /* value is binary, so needs to have length! */
-#endif
             char key_and_value[0]; /* null terminator between key and value */
         } eager_set_request;
 
@@ -142,17 +94,6 @@ struct packet {
             void* remote_address;
             uint32_t remote_key; /*there we will insert the value to return*/
         } rndv_set_response;
-
-#ifdef EX4
-        struct {
-            unsigned num_of_servers;
-            char key[0];
-        } find;
-
-        struct {
-            unsigned selected_server;
-        } location;
-#endif
     }pp;
 };
 
@@ -818,28 +759,6 @@ void handle_server_packets_only(struct pingpong_context *ctx, struct packet *pac
         }
       break;
 
-#ifdef EX4
-      case FIND:
-        num_servers = packet->pp.find.num_of_servers;
-        inp_key = calloc((strlen(packet->pp.find.key)+1),1);
-        strcpy(inp_key,packet->pp.find.key);
-
-        /*hash fucntion = sums all the chars of the key and then mod num of servers*/
-        int i;
-        int sum=0;
-        for(i=0; i<strlen(inp_key); i++){
-            sum=sum+inp_key[i];
-        }
-
-        int server_location = sum%num_servers;
-
-        response_with_loc = (struct packet*) ctx->buf;//we create a respone packet
-        response_with_loc->type = LOCATION;
-        response_with_loc->pp.location.selected_server=server_location;
-        response_size = sizeof(struct packet);
-        break;
-
-#endif
       default:
         break;
     }
@@ -1064,8 +983,6 @@ int is_server(){
 }
 
 
-
-
 int pp_wait_completions(struct pingpong_context *ctx, int iters)
 {
   int rcnt, scnt, num_cq_events, use_event = 0;
@@ -1168,9 +1085,6 @@ int kv_set(void *kv_handle, const char *key, const char *value)
   return ret;
 }
 
-
-
-
 /* client want to send EAGER_GET_REQUEST to server - so client need to sent key */
 int kv_get(void *kv_handle, const char *key, char **value)
 {
@@ -1241,195 +1155,6 @@ int kv_close(void *kv_handle)
 #endif /* EX3 */
 
 
-
-
-
-
-
-
-
-
-#ifdef EX4
-struct mkv_ctx {
-	unsigned num_servers;
-	struct pingpong_context *kv_ctxs[0];
-};
-
-int mkv_open(struct kv_server_address *servers, void **mkv_h)
-{
-	struct mkv_ctx *ctx;
-	unsigned count = 0;
-	while (servers[count++].servername); /* count servers */
-	ctx = malloc(sizeof(*ctx) + count * sizeof(void*));
-	if (!ctx) {
-		return 1;
-	}
-
-	ctx->num_servers = count -1;
-	for (count = 0; count < ctx->num_servers; count++) {
-		if (orig_main(&servers[count], EAGER_PROTOCOL_LIMIT, g_argc, g_argv, &ctx->kv_ctxs[count])) {
-			return 1;
-		}
-	}
-
-	*mkv_h = ctx;
-	return 0;
-}
-
-int mkv_set(void *mkv_h, unsigned kv_id, const char *key, const char *value)
-{
-	struct mkv_ctx *ctx = mkv_h;
-	return kv_set(ctx->kv_ctxs[kv_id], key, value);
-}
-
-int mkv_get(void *mkv_h, unsigned kv_id, const char *key, char **value)
-{
-	struct mkv_ctx *ctx = mkv_h;
-	return kv_get(ctx->kv_ctxs[kv_id], key, value);
-}
-
-void mkv_release(char *value)
-{
-	kv_release(value);
-}
-
-void mkv_close(void *mkv_h)
-{
-	unsigned count;
-	struct mkv_ctx *ctx = mkv_h;
-	for (count = 0; count < ctx->num_servers; count++) {
-		pp_close_ctx((struct pingpong_context*)ctx->kv_ctxs[count]);
-	}
-	free(ctx);
-}
-
-
-
-
-
-
-
-
-
-struct dkv_ctx {
-	struct mkv_ctx *mkv;
-	struct pingpong_context *indexer;
-};
-
-int dkv_open(struct kv_server_address *servers, /* array of servers */
-             struct kv_server_address *indexer, /* single indexer */
-             void **dkv_h)
-{
-	struct dkv_ctx *ctx = (struct dkv_ctx*) malloc(sizeof(struct dkv_ctx));
-	if (orig_main(indexer, EAGER_PROTOCOL_LIMIT, g_argc, g_argv, &ctx->indexer)) {
-		return 1;
-	}
-	if (mkv_open(servers, (void**)&ctx->mkv)) {
-		return 1;
-	}
-	*dkv_h = ctx;
-
-        return 0 ;
-}
-
-int dkv_set(void *dkv_h, const char *key, const char *value, unsigned length)
-{
-    struct dkv_ctx *ctx = dkv_h;
-    struct packet *set_packet = (struct packet*)ctx->indexer->buf;
-    unsigned packet_size = strlen(key) + sizeof(struct packet);
-
-    /* Step #1: The client sends the Index server FIND(key, #kv-servers) */
-    set_packet->type = FIND;
-    set_packet->pp.find.num_of_servers = ctx->mkv->num_servers;
-    strcpy(set_packet->pp.find.key, key);
-
-    pp_post_recv(ctx->indexer, 1); /* Posts a receive-buffer for LOCATION */
-    pp_post_send(ctx->indexer, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-    assert(pp_wait_completions(ctx->indexer, 2)==0); /* wait for both to complete */
-
-    /* Step #2: The Index server responds with LOCATION(#kv-server-id) */
-    assert(set_packet->type == LOCATION);
-
-    /* Step #3: The client contacts KV-server with the ID returned in LOCATION, using SET/GET messages. */
-    return mkv_set(ctx->mkv, set_packet->pp.location.selected_server, key, value);
-}
-
-int dkv_get(void *dkv_h, const char *key, char **value, unsigned *length)
-{
-    struct dkv_ctx *ctx = dkv_h;
-    struct packet *set_packet = (struct packet*)ctx->indexer->buf;
-    unsigned packet_size = strlen(key) + sizeof(struct packet);
-
-    /* Step #1: The client sends the Index server FIND(key, #kv-servers) */
-    set_packet->type = FIND;
-    set_packet->pp.find.num_of_servers = ctx->mkv->num_servers;
-    strcpy(set_packet->pp.find.key, key);
-
-    pp_post_recv(ctx->indexer, 1); /* Posts a receive-buffer for LOCATION */
-    pp_post_send(ctx->indexer, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-    assert(pp_wait_completions(ctx->indexer, 2)==0); /* wait for both to complete */
-
-    /* Step #2: The Index server responds with LOCATION(#kv-server-id) */
-    assert(set_packet->type == LOCATION);
-
-    /* Step #3: The client contacts KV-server with the ID returned in LOCATION, using SET/GET messages. */
-    return mkv_get(ctx->mkv, set_packet->pp.location.selected_server, key, value);
-}
-
-void dkv_release(char *value)
-{
-	mkv_release(value);
-}
-
-int dkv_close(void *dkv_h)
-{
-	struct dkv_ctx *ctx = dkv_h;
-	pp_close_ctx(ctx->indexer);
-	mkv_close(ctx->mkv);
-	free(ctx);
-}
-
-void recursive_fill_kv(char const* dirname, void *dkv_h) {
-	struct dirent *curr_ent;
-	DIR* dirp = opendir(dirname);
-	if (dirp == NULL) {
-		return;
-	}
-
-	while ((curr_ent = readdir(dirp)) != NULL) {
-		if (!((strcmp(curr_ent->d_name, ".") == 0) ||
-		(strcmp(curr_ent->d_name, "..") == 0))) {
-			char* path = malloc(strlen(dirname) + strlen(curr_ent->d_name) + 2);
-			strcpy(path, dirname);
-			strcat(path, "/");
-			strcat(path, curr_ent->d_name);
-			if (curr_ent->d_type == DT_DIR) {
-				recursive_fill_kv(path, dkv_h);
-			} else if (curr_ent->d_type == DT_REG) {
-				int fd = open(path, O_RDONLY);
-				size_t fsize = lseek(fd, (size_t)0, SEEK_END);
-				void *p = mmap(0, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
-				/* TODO (1LOC): Add a print here to see you found the full paths... */
-				dkv_set(dkv_h, path, p, fsize);
-				munmap(p, fsize);
-				close(fd);
-			}
-			free(path);
-		}
-	}
-	closedir(dirp);
-}
-
-#define my_open    dkv_open
-#define set(a,b,c) dkv_set(a,b,c,strlen(c))
-#define get(a,b,c) dkv_get(a,b,c,&g_argc)
-#define release    dkv_release
-#define my_close   dkv_close
-#endif /* EX4 */
-
-
-
-
 struct kv_server_address parser_input(char* ip,char* port){
   struct kv_server_address server = {
       .servername = NULL,
@@ -1442,8 +1167,6 @@ struct kv_server_address parser_input(char* ip,char* port){
   server.port = atoi(port);
 
   return server;
-
-
 
 }
 
@@ -1465,7 +1188,6 @@ struct kv_server_address* run_client_get_servers(){
 
   return servers;
 }
-
 
 
 
@@ -1520,12 +1242,8 @@ int main(int argc, char **argv)
 
 
 
-
-#ifdef EX4
-      assert(0 == my_open(servers, indexer, &kv_ctx));
-#else
       assert(0 == my_open(&servers[0], &kv_ctx));
-#endif
+
       /* Test small size */
       assert(100 < MAX_TEST_SIZE);
       memset(send_buffer, 'a', 100);
@@ -1562,9 +1280,6 @@ int main(int argc, char **argv)
       release(recv_buffer);
 
 
-#ifdef EX4
-      recursive_fill_kv(TEST_LOCATION, kv_ctx);
-#endif
       printf("Success\n");
       my_close(kv_ctx);
     }
