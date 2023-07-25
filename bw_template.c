@@ -963,6 +963,7 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   my_dest.psn = lrand48() & 0xffffff;
   inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof gid);
   fprintf(stdout, "1");
+  fflush(stdout);
   if (servername) {
       rem_dest = pp_client_exch_dest(servername, port, &my_dest);
     }
@@ -972,6 +973,7 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   if (!rem_dest)
     return 1;
   fprintf(stdout, "2");
+  fflush(stdout);
   inet_ntop(AF_INET6, &rem_dest->gid, gid, sizeof gid);
 
   if (servername)
@@ -983,6 +985,7 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   ibv_free_device_list(dev_list);
   free(rem_dest);
   fprintf(stdout, "connected");
+  fflush(stdout);
   return 0;
 }
 
@@ -1067,8 +1070,7 @@ int main(int argc, char *argv[])
       usage(argv[0]);
       return 1;
     }
-  fprintf (stdout, "0");
-  fflush(stdout);
+
 
   void *kv_handle[NUM_CLIENT];
 
