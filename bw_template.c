@@ -554,7 +554,7 @@ static int pp_post_recv(struct handle *handle, int buffer)
   int ind = buffer * SIZE_BUFFER;
 
   struct ibv_sge list = {
-      .addr	= (uintptr_t) &(handle->ctx->buffer[ind]),
+      .addr	= (uintptr_t) &(handle->ctx->buf[ind]),
       .length = SIZE_BUFFER,
       .lkey	= handle->ctx->mr->lkey
   };
@@ -566,21 +566,27 @@ static int pp_post_recv(struct handle *handle, int buffer)
   };
   struct ibv_recv_wr *bad_wr;
 
-  int i;
-  for (i = 0; i < n; ++i) //todo: ask yosef
-    if (ibv_post_recv(handle->ctx->qp, &wr, &bad_wr)) {
-        break;
-      }
-  return i;
+//  int i;
+//  for (i = 0; i < n; ++i) //todo: ask yosef
+//    if (ibv_post_recv(handle->ctx->qp, &wr, &bad_wr)) {
+//        break;
+//      }
+//  return i;
+  if (ibv_post_recv(handle->ctx->qp, &wr, &bad_wr)){
+      fprintf(stderr, "Failed to post receive.");
+      return 1;
+    }
+
+  return 0;
 }
 
 static int pp_post_send(struct handle *handle, int buffer, int ind_buffer)
 {
   handle->ctx->free_set_bufs_amount--;
-  handle->ctx->buffer[buffer] = 0;
+  handle->ctx->buf[buffer] = 0;
 
   struct ibv_sge list = {
-      .addr	= (uint64_t)((&handle->ctx->buf[ind_buffer])),
+      .addr	= (uintptr_t)(&(handle->ctx->buf[ind_buffer])),
       .length = SIZE_BUFFER,
       .lkey	= handle->ctx->mr->lkey
   };
@@ -599,7 +605,7 @@ static int pp_post_send(struct handle *handle, int buffer, int ind_buffer)
 int pp_wait_completions(struct handle *handle, int num_polls)
 {
   int rcnt = 0, scnt = 0;
-  while (rcnt + scnt < iters) {
+  while (rcnt + scnt < num_polls) {
       struct ibv_wc wc[WC_BATCH];
       int ne, i;
 
@@ -814,11 +820,11 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
     int                      port = 4792;
     int                      ib_port = 1;
     enum ibv_mtu             mtu = IBV_MTU_2048;
-    int                      rx_depth = 5000;
-    int                      tx_depth = 5000;
-    int                      iters = 50000;
+    int                      rx_depth = 6000;
+    int                      tx_depth = 6000;
+    int                      iters = 60000;
     int                      use_event = 0;
-    int                      size = MAXIMUM_SIZE;
+    int                      size = 1048576L;
     int                      sl = 0;
     int                      gidx = -1;
     char                     gid[33];
@@ -987,29 +993,27 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
 
 
 int kv_open(char *servername, void **kv_handle) {
-  return helper_open (servername, argc_, argv_, (struct pingpong_context **)kv_handle)
+  return helper_open (servername, argc_, argv_, (struct pingpong_context **)kv_handle);
 }
 
 
 void construct_set_message(struct handle *handle, int buffer, const char *key, const char *value, size_t keylen, size_t vallen, char protocol) {
   int ind = buffer * SIZE_BUFFER;
-  char *control_buf = (char *)(&(handle->ctx->buf[ind]));
+  char *buf = (char *)(&(handle->ctx->buf[ind]));
 
-  control_buf[0] = protocol;
-  control_buf[1] = 's';
-
-  size_t addrlen = protocol ? sizeof(void *) : 0;
+  buf[0] = protocol;
+  buf[1] = 's';
 
   // Copy the key and value to the buffer
-  memcpy(buffer + SET_PREFIX_SIZE + addrlen, key, keylen);
-  memcpy(buffer + SET_PREFIX_SIZE + addrlen + keylen, value, vallen);
+  memcpy(buf + SET_PREFIX_SIZE, key, keylen);
+  memcpy(buf + SET_PREFIX_SIZE + keylen, value, vallen);
 }
 
 
 int kv_eager_set(struct handle *handle, const char *key, const char *value, size_t keylen, size_t vallen) {
   int free_buffer = get_buffer (handle);
 
-  construct_set_message (handle, free_buffer, ,key, value, keylen, vallen);
+  construct_set_message (handle, free_buffer, key, value, keylen, vallen, 'e');
   if (pp_post_send (handle, free_buffer, free_buffer * SIZE_BUFFER)) {
       fprintf(stderr, "Client couldn't post send.\n");
       return 1;
