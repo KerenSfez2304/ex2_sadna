@@ -962,7 +962,7 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   my_dest.qpn = ctx->qp->qp_num;
   my_dest.psn = lrand48() & 0xffffff;
   inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof gid);
-
+  fprintf(stdout, "1");
   if (servername) {
       rem_dest = pp_client_exch_dest(servername, port, &my_dest);
     }
@@ -971,7 +971,7 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
 
   if (!rem_dest)
     return 1;
-
+  fprintf(stdout, "2");
   inet_ntop(AF_INET6, &rem_dest->gid, gid, sizeof gid);
 
   if (servername)
