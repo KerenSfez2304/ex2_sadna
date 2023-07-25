@@ -1068,8 +1068,8 @@ int kv_close(void *kv_handle) {
 }
 
 int get_servername(char ** servername, int argc, char **argv) {
-  argc_global = argc;
-  argv_global = argv;
+  argc_ = argc;
+  argv_ = argv;
   if (optind == argc - 1)
     *servername = strdup(argv[optind]);
   else if (optind < argc) {
