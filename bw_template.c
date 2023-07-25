@@ -45,142 +45,51 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <time.h>
-
+#include "map.h"
 #include <infiniband/verbs.h>
 
-#ifdef EX4
-#include <fcntl.h>
-#include <dirent.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#endif
+#define MAX_KEY_LENGTH  256
+#define MAX_VALUE_LENGTH 1024
+#define MAX_STATUS_LENGTH 10
+#define STATUS_NONE    "none"
+#define STATUS_READING "reading"
+#define STATUS_WRITING "writing"
+#define NUM_BUFFS 10 //todo: mmaybe change?
+#define NUM_RECV_BUFFS 5
+#define SIZE_BUFFER 4096
+#define MAX_EAGER_MSG_SIZE 4096
 
-int g_argc;
-char **g_argv;
+#define WC_BATCH (1)
+#define ITER_WARM_UP 6000
+#define SET_PREFIX_SIZE 2
+#define NUM_CLIENT 2
 
-#define EAGER_PROTOCOL_LIMIT (1 << 12) /* 4KB limit */
-#define MAX_TEST_SIZE (10 * EAGER_PROTOCOL_LIMIT)
-#define TEST_LOCATION "~/www/"
-
-
-enum packet_type {
-    EAGER_GET_REQUEST,
-    EAGER_GET_RESPONSE,
-    EAGER_SET_REQUEST,
-    // EAGER_SET_RESPONSE - not needed!
-
-    RENDEZVOUS_GET_REQUEST,
-    RENDEZVOUS_GET_RESPONSE,
-    RENDEZVOUS_SET_REQUEST,
-    RENDEZVOUS_SET_RESPONSE,
-
-#ifdef EX4
-    FIND,
-    LOCATION,
-#endif
-};
-
-struct list_of_pairs{
-    char* key;
-    char* value;
-    struct list_of_pairs* next;
-};
-
-struct list_of_pairs* our_list = NULL;
-
-/* server - putting key & value to the list OR returning value of some input key
- * client - asking to set key and value to the list OR asking for value of some key he wants
-*/
-struct packet {
-    enum packet_type type; /* What kind of packet/protocol is this */
-    union {
-        /* The actual packet type will determine which struct will be used: */
-
-        /* EAGER PROTOCOL PACKETS */
-        struct {
-#ifdef EX4
-            unsigned value_length; /* value is binary, so needs to have length! */
-#endif
-            char key_and_value[0]; /* null terminator between key and value */
-        } eager_set_request;
-
-        struct {
-            unsigned value_length;
-            char value[0];
-        } eager_get_response;
-
-        struct { /*get request - FOR server, when client will want to get the value of some key */
-            char key[0];
-        } eager_get_request;
-
-        // struct {
-        //    // EAGER_SET_RESPONSE - not needed!
-        // } eager_set_response;
-
-        /* RENDEZVOUS PROTOCOL PACKETS */
-        struct {
-
-            void* remote_address;
-            uint32_t remote_key;
-            char key[0];
-        } rndv_get_request;
-
-        struct {
-            void* remote_address;
-            uint32_t remote_key;
-            unsigned value_length;
-        } rndv_get_response;
-
-        struct {
-            void* remote_address;
-            uint32_t remote_key;
-            unsigned value_length;
-            char key[0]; /*key <4kb*/
-        } rndv_set_request;
-
-        struct {
-            void* remote_address;
-            uint32_t remote_key; /*there we will insert the value to return*/
-        } rndv_set_response;
-
-#ifdef EX4
-        struct {
-            unsigned num_of_servers;
-            char key[0];
-        } find;
-
-        struct {
-            unsigned selected_server;
-        } location;
-#endif
-    }pp;
-};
-
-struct kv_server_address {
-    char *servername; /* In the last item of an array this is NULL */
-    short port; /* This is useful for multiple servers on a host */
-};
+int argc_;
+char** argv_;
 
 enum {
     PINGPONG_RECV_WRID = 1,
     PINGPONG_SEND_WRID = 2,
 };
 
+
 static int page_size;
 
 struct pingpong_context {
-    struct ibv_context	*context;
-    struct ibv_comp_channel *channel;
+    struct ibv_context		*context;
+    struct ibv_comp_channel	*channel;
     struct ibv_pd		*pd;
     struct ibv_mr		*mr;
     struct ibv_cq		*cq;
     struct ibv_qp		*qp;
     void			*buf;
-    int			 size;
-    int			 rx_depth;
-    int                      routs;
-    int			 pending;
-    struct ibv_port_attr     portinfo;
+    int             num_free_buffs;
+    int             free_buffs[NUM_BUFFS];
+    int             waiting_buffs[NUM_RECV_BUFFS];
+    size_t				size;
+    int				rx_depth;
+    int				routs;
+    struct ibv_port_attr	portinfo;
 };
 
 struct pingpong_dest {
@@ -201,6 +110,24 @@ enum ibv_mtu pp_mtu_to_enum(int mtu)
       default:   return -1;
     }
 }
+
+struct handle {
+    hashmap *map;
+    struct ibv_device **dev_list;
+    struct pingpong_context *ctx;
+    struct pingpong_dest *rem_dest;
+    int last_wr_id;
+};
+
+struct KeyValueEntry {
+    // todo: maybe malloc?
+    char key[MAX_KEY_LENGTH];
+    char* value;
+    char request_type;
+    char protocol;
+    char status[MAX_STATUS_LENGTH]; // Additional status field
+};
+
 
 uint16_t pp_get_local_lid(struct ibv_context *context, int port)
 {
@@ -469,7 +396,7 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 #include <sys/param.h>
 
 static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
-                                            int rx_depth, int port,
+                                            int rx_depth, int tx_depth, int port,
                                             int use_event, int is_server)
 {
   struct pingpong_context *ctx;
@@ -512,13 +439,13 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
       return NULL;
     }
 
-  ctx->mr = ibv_reg_mr(ctx->pd, ctx->buf, size, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+  ctx->mr = ibv_reg_mr(ctx->pd, ctx->buf, size, IBV_ACCESS_LOCAL_WRITE);
   if (!ctx->mr) {
       fprintf(stderr, "Couldn't register MR\n");
       return NULL;
     }
 
-  ctx->cq = ibv_create_cq(ctx->context, rx_depth + 1, NULL,
+  ctx->cq = ibv_create_cq(ctx->context, rx_depth + tx_depth, NULL,
                           ctx->channel, 0);
   if (!ctx->cq) {
       fprintf(stderr, "Couldn't create CQ\n");
@@ -530,10 +457,11 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
         .send_cq = ctx->cq,
         .recv_cq = ctx->cq,
         .cap     = {
-            .max_send_wr  = 1,
+            .max_send_wr  = tx_depth,
             .max_recv_wr  = rx_depth,
             .max_send_sge = 1,
-            .max_recv_sge = 1
+            .max_recv_sge = 1,
+            .max_inline_data = 64 // define the max inline
         },
         .qp_type = IBV_QPT_RC
     };
@@ -567,91 +495,159 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
   return ctx;
 }
 
-int pp_close_ctx(struct pingpong_context *ctx)
+long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
 {
-  if (ibv_destroy_qp(ctx->qp)) {
-      fprintf(stderr, "Couldn't destroy QP\n");
-      return 1;
-    }
-
-  if (ibv_destroy_cq(ctx->cq)) {
-      fprintf(stderr, "Couldn't destroy CQ\n");
-      return 1;
-    }
-
-  if (ibv_dereg_mr(ctx->mr)) {
-      fprintf(stderr, "Couldn't deregister MR\n");
-      return 1;
-    }
-
-  if (ibv_dealloc_pd(ctx->pd)) {
-      fprintf(stderr, "Couldn't deallocate PD\n");
-      return 1;
-    }
-
-  if (ctx->channel) {
-      if (ibv_destroy_comp_channel(ctx->channel)) {
-          fprintf(stderr, "Couldn't destroy completion channel\n");
-          return 1;
-        }
-    }
-
-  if (ibv_close_device(ctx->context)) {
-      fprintf(stderr, "Couldn't release context\n");
-      return 1;
-    }
-
-  free(ctx->buf);
-  free(ctx);
-
-  return 0;
+  long double diff_time = (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
+  long double throughput = iters * message_size / diff_time;
+  return throughput;
 }
 
-static int pp_post_recv(struct pingpong_context *ctx, int n)
-{
-  struct ibv_sge list = {
-      .addr	= (uintptr_t) ctx->buf,
-      .length = ctx->size,
-      .lkey	= ctx->mr->lkey
-  };
-  struct ibv_recv_wr wr = {
-      .wr_id	    = PINGPONG_RECV_WRID,
-      .sg_list    = &list,
-      .num_sge    = 1,
-  };
-  struct ibv_recv_wr *bad_wr;
-  int i;
-
-  for (i = 0; i < n; ++i)
-    if (ibv_post_recv(ctx->qp, &wr, &bad_wr))
-      break;
-
-  return i;
-}
-
-static int pp_post_send(struct pingpong_context *ctx, enum ibv_wr_opcode opcode, unsigned size, const char *local_ptr, void *remote_ptr, uint32_t remote_key)
-{
-  struct ibv_sge list = {
-      .addr	= (uintptr_t) (local_ptr ? local_ptr : ctx->buf),
-      .length = size,
-      .lkey	= ctx->mr->lkey
-  };
-  struct ibv_send_wr wr = {
-      .wr_id	    = PINGPONG_SEND_WRID,
-      .sg_list    = &list,
-      .num_sge    = 1,
-      .opcode     = opcode,
-      .send_flags = IBV_SEND_SIGNALED,
-  };
-  struct ibv_send_wr *bad_wr;
-
-  if (remote_ptr) {
-      wr.wr.rdma.remote_addr = (uintptr_t) remote_ptr;
-      wr.wr.rdma.rkey = remote_key;
-    }
-
-  return ibv_post_send(ctx->qp, &wr, &bad_wr);
-}
+//int pp_close_ctx(struct pingpong_context *ctx)
+//{
+//  if (ibv_destroy_qp(ctx->qp)) {
+//      fprintf(stderr, "Couldn't destroy QP\n");
+//      return 1;
+//    }
+//
+//  if (ibv_destroy_cq(ctx->cq)) {
+//      fprintf(stderr, "Couldn't destroy CQ\n");
+//      return 1;
+//    }
+//
+//  if (ibv_dereg_mr(ctx->mr)) {
+//      fprintf(stderr, "Couldn't deregister MR\n");
+//      return 1;
+//    }
+//
+//  if (ibv_dealloc_pd(ctx->pd)) {
+//      fprintf(stderr, "Couldn't deallocate PD\n");
+//      return 1;
+//    }
+//
+//  if (ctx->channel) {
+//      if (ibv_destroy_comp_channel(ctx->channel)) {
+//          fprintf(stderr, "Couldn't destroy completion channel\n");
+//          return 1;
+//        }
+//    }
+//
+//  if (ibv_close_device(ctx->context)) {
+//      fprintf(stderr, "Couldn't release context\n");
+//      return 1;
+//    }
+//
+//  free(ctx->buf);
+//  free(ctx);
+//
+//  return 0;
+//}
+//
+//
+//static int pp_post_recv(struct handle *handle, int buffer)
+//{
+//  int ind = buffer * SIZE_BUFFER;
+//
+//  struct ibv_sge list = {
+//      .addr	= (uintptr_t) &(handle->ctx->buf[ind]),
+//      .length = SIZE_BUFFER,
+//      .lkey	= handle->ctx->mr->lkey
+//  };
+//  struct ibv_recv_wr wr = {
+//      .wr_id	    = buffer,
+//      .sg_list    = &list,
+//      .num_sge    = 1,
+//      .next       = NULL
+//  };
+//  struct ibv_recv_wr *bad_wr;
+//
+////  int i;
+////  for (i = 0; i < n; ++i) //todo: ask yosef
+////    if (ibv_post_recv(handle->ctx->qp, &wr, &bad_wr)) {
+////        break;
+////      }
+////  return i;
+//  if (ibv_post_recv(handle->ctx->qp, &wr, &bad_wr)){
+//      fprintf(stderr, "Failed to post receive.");
+//      return 1;
+//    }
+//
+//  return 0;
+//}
+//
+//static int pp_post_send(struct handle *handle, int buffer, int ind_buffer)
+//{
+//  handle->ctx->num_free_buffs--;
+//  handle->ctx->free_buffs[buffer] = 0;
+//
+//  struct ibv_sge list = {
+//      .addr	= (uintptr_t)(&(handle->ctx->buf[ind_buffer])),
+//      .length = SIZE_BUFFER,
+//      .lkey	= handle->ctx->mr->lkey
+//  };
+//
+//  struct ibv_send_wr *bad_wr, wr = {
+//      .wr_id	    = buffer,
+//      .sg_list    = &list,
+//      .num_sge    = 1,
+//      .opcode     = IBV_WR_SEND,
+//      .send_flags = IBV_SEND_SIGNALED | IBV_SEND_INLINE, // notice the inline here
+//      .next       = NULL
+//  };
+//  return ibv_post_send(handle->ctx->qp, &wr, &bad_wr);
+//}
+//
+//int pp_wait_completions(struct handle *handle, int num_polls)
+//{
+//  int rcnt = 0, scnt = 0;
+//  while (rcnt + scnt < num_polls) {
+//      struct ibv_wc wc[WC_BATCH];
+//      int ne, i;
+//
+//      do {
+//          ne = ibv_poll_cq(handle->ctx->cq, WC_BATCH, wc);
+//          if (ne < 0) {
+//              fprintf(stderr, "poll CQ failed %d\n", ne);
+//              return 1;
+//            }
+//
+//        } while (ne < 1);
+//
+//      for (i = 0; i < ne; ++i) {
+//          if (wc[i].status != IBV_WC_SUCCESS) {
+//              fprintf(stderr, "Failed status %s (%d) for wr_id %d\n",
+//                      ibv_wc_status_str(wc[i].status),
+//                      wc[i].status, (int) wc[i].wr_id);
+//              return 1;
+//            }
+//
+//          switch ((int) wc[i].wr_id) {
+//              case PINGPONG_SEND_WRID:
+//                ++scnt;
+//              break;
+//
+//              case PINGPONG_RECV_WRID:
+////                    if (--ctx->routs <= 10) {
+////                        ctx->routs += pp_post_recv(ctx, ctx->rx_depth - ctx->routs);
+////                        if (ctx->routs < ctx->rx_depth) {
+////                            fprintf(stderr,
+////                                    "Couldn't post receive (%d)\n",
+////                                    ctx->routs);
+////                            return 1;
+////                        }
+////                    }
+//                ++rcnt;
+//              break;
+//
+//              default:
+//                fprintf(stderr, "Completion for unknown wr_id %d\n",
+//                        (int) wc[i].wr_id);
+//              return 1;
+//            }
+//        }
+//
+//    }
+//  return 0;
+//}
 
 static void usage(const char *argv0)
 {
@@ -672,205 +668,160 @@ static void usage(const char *argv0)
   printf("  -g, --gid-idx=<gid index> local port gid index\n");
 }
 
-/* cases for server*/
-void handle_server_packets_only(struct pingpong_context *ctx, struct packet *packet){
-  unsigned response_size = 0;
-  struct ibv_mr* mr_create;
-  struct packet* response_with_mr;
-  struct packet* response_with_val;
-  struct packet* response_with_loc;
 
-  struct list_of_pairs* curr = our_list;//pointer to owr list
-  switch (packet->type) {
-      int key_exist;
-      int size_of_val;
-      int key_len;
-      int val_len;
-      char* val_to_add;
-      int num_servers;
-      char* inp_key;
-      struct list_of_pairs* current ;
-      /* Only handle packets relevant to the server here - client will handle inside get/set() calls */
-      case EAGER_GET_REQUEST:
-        //;
-        /*server got an GET REQUEST, means client sent key, and want respone=value*/
+///////////////////////////// SERVER ///////////////////////////////////
+//int get_buffer(struct handle *handle){
+//
+//  if (handle->ctx->num_free_buffs == 0){
+//      pp_wait_completions (handle, WC_BATCH); //todo
+//    }
+//
+//  for (int i = 0; i < NUM_BUFFS; i++){
+//      if (handle->ctx->free_buffs[i] == 1) {
+//          return i;
+//        }
+//    }
+//}
+//
+//
+//int server_handle_eager_get_request(struct handle *handle, uintptr_t value,
+//                                    size_t vallen){
+//
+//  int free_buffer = get_buffer(handle);
+//  int ind = free_buffer * SIZE_BUFFER;
+//
+//  char *set_buffer = (char *)(&(handle->ctx->buf[ind]));
+//  set_buffer[0] = 'e';
+//  memcpy(set_buffer + 1, (char*)value, vallen);
+//  if (pp_post_send (handle, free_buffer, ind)) {
+//      fprintf(stderr, "Client couldn't post send\n");
+//      return 1;
+//    }
+//  if (pp_wait_completions (handle, 1)){ // todo
+//      fprintf(stderr, "Failed to poll completion of a response containing the value.");
+//      return 1;
+//    }
+//
+//  return 0;
+//}
+//
+//int server_parse_get(struct handle *handle, char *msg) {
+//  uintptr_t value;
+//  size_t keysize = strlen(&msg[1]) + 1;
+//  hashmap_get(handle->map, &msg[1], keysize, &value);
+//  size_t vallen = strlen((char *)value) + 1;
+//  // msg will consists of char (e/r) and value
+//  size_t msg_size = vallen + 1;
+//
+//  if (msg_size <= MAX_EAGER_MSG_SIZE){
+//      if (server_handle_eager_get_request (handle, value, vallen)){
+//          fprintf(stderr, "Server failed to parse get request with size <= 4K.");
+//          return 1;
+//        }
+//    }
+//  else {
+//      if (server_handle_rend_get_request (handle, value, vallen)){
+//          fprintf(stderr, "Server failed to parse get request with size > 4K.");
+//          return 1;
+//        }
+//    }
+//  return 0;
+//}
+//
+//char* copy_string(const char* str) {
+//  size_t len = strlen(str) + 1;
+//  char* copy = (char*)malloc(len);
+//  if (!copy) {
+//      fprintf(stderr, "Failed to allocate memory.\n");
+//      return NULL;
+//    }
+//  strcpy(copy, str);
+//  return copy;
+//}
+//
+//int server_parse_set_eager(struct handle *handle, char *msg) {
+//  size_t keylen = strlen(&(msg[SET_PREFIX_SIZE])) + 1;
+//  char* key = copy_string(&msg[SET_PREFIX_SIZE]);
+//  if (!key) {
+//      return 1;
+//    }
+//
+//  char* value = copy_string(&msg[SET_PREFIX_SIZE + keylen]);
+//  if (!value) {
+//      free(key);
+//      return 1;
+//    }
+//
+//  uintptr_t cur_val;
+//  if (hashmap_get(handle->map, key, keylen, &cur_val)){
+//      free((void *) cur_val);
+//    } else {
+//      hashmap_set(handle->map, key, keylen, (uintptr_t)value);
+//    }
+//
+//  return 0;
+//}
+//
+//int server_parse_request(struct handle *handle, int buffer){
+//  int buffer_index = (buffer) * SIZE_BUFFER;
+//  char *message = &(((char *)(handle->ctx->buf))[buffer_index]);
+//
+//  switch (message[0]) {
+//      case 'e':
+//        if (server_parse_set_eager(handle, message)) {
+//            fprintf(stderr, "Failed to parse an eager client request.\n");
+//            return 1;
+//          }
+//      break;
+//
+//      case 'r':
+//        if (parse_rendezvous_request(handle, message)) { //todo
+//            fprintf(stderr, "Failed to parse a rendezvous client request.\n");
+//            return 1;
+//          }
+//      break;
+//
+//      case 'g':
+//        if (server_parse_get(handle, message)) {
+//            fprintf(stderr, "Failed to parse a client's get request.\n");
+//            return 1;
+//          }
+//      break;
+//
+//      default:
+//        fprintf(stderr, "Failed to parse a client request, invalid usage. received request: %s", message);
+//      return 1;
+//    }
+//
+//  if (pp_post_recv(handle, buffer)){
+//      fprintf(stderr, "Failed to post receive.");
+//      return 1;
+//    }
+//  return 0;
+//}
 
-        key_exist = -1;//boolean if key exist or not
-      while(curr!=NULL && key_exist==-1){
-          if(strcmp(curr->key, packet->pp.eager_get_request.key)==0){//if we found the actual key in our list of pairs
-              size_of_val = strlen(curr->value)+1;
-              if(size_of_val > (EAGER_PROTOCOL_LIMIT)){
-                  //goto LABEL_GET_RENDEZVOUS;
-                  mr_create = ibv_reg_mr(ctx->pd, curr->value, size_of_val, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ);
-                  response_with_mr = (struct packet*) ctx->buf;//we create a respone packet
-                  response_with_mr->type = RENDEZVOUS_GET_RESPONSE;
-                  response_with_mr->pp.rndv_get_response.remote_address = mr_create->addr;
-                  response_with_mr->pp.rndv_get_response.remote_key = mr_create->rkey;
-                  response_with_mr->pp.rndv_get_response.value_length = size_of_val;
-                  response_size = sizeof(struct packet); ////can change to
-                  key_exist=1;
-                  break;
-                }
-              response_with_val = (struct packet*) ctx->buf;//we create a respone packet
-              response_with_val->type = EAGER_GET_RESPONSE; //make the packet a type of get respone for the client
-              strcpy(response_with_val->pp.eager_get_response.value, curr->value); //putting there the value that the client should get
-              response_with_val->pp.eager_get_response.value_length = strlen(curr->value) + 1; //the length of value will be +1, null
-              response_size = (unsigned)((void*)packet->pp.eager_get_response.value - (void*)packet + strlen(curr->value) + 1);
-              key_exist = 1;
-            }
-          else{
-              curr = curr->next;
-            }
-        }
-      if(key_exist==-1){ //ELSE IF KEY NOT EXIST, we will sent to the client null
-          response_with_val = (struct packet*) ctx->buf;//we create a respone packet
-          response_with_val->type = EAGER_GET_RESPONSE; //make the packet a type of get respone for the client
-          response_with_val->pp.eager_get_response.value[0] = 0;//the value will be NULL
-          response_with_val->pp.eager_get_response.value_length = 1;//length 0+1=1
-          response_size = sizeof(response_with_val) + 1;//total size of packet will be the packet PLUS the value(=null=0) +1,null
-
-        }
-      break;
-
-
-      case EAGER_SET_REQUEST:/*server got an SET REQUEST, means client sent keyANDvalue, and want respone=value*/
-        key_exist = -1;//boolean if key exist or not
-      key_len = strlen(packet->pp.eager_set_request.key_and_value) + 1;//get the length of key+null terminator
-      val_len = strlen(packet->pp.eager_set_request.key_and_value + key_len) + 1;//get len of value+null terminator
-      val_to_add = strdup(packet->pp.eager_set_request.key_and_value + key_len);
-      while(curr != NULL && key_exist==-1){
-          if(strcmp(curr->key, packet->pp.eager_set_request.key_and_value)==0){//if key already exist
-              free(curr->value);
-              curr->value = (char*)malloc(val_len);
-              strcpy(curr->value,  val_to_add);
-              key_exist = 1;
-
-            }
-
-          curr = curr->next;
-
-        }
-
-
-      if(key_exist==-1){//if key not exists - creating new friend in our list
-          current = (struct list_of_pairs*)malloc(sizeof(char*)*2+sizeof(struct list_of_pairs));//creating new node=pair
-          current->key = calloc(key_len,1);//creating key
-          current->value = calloc(val_len,1);//creating val
-          strcpy(current->key, packet->pp.eager_set_request.key_and_value);
-          strcpy(current->value, packet->pp.eager_set_request.key_and_value + key_len);
-          current->next = our_list;//adding this node to head of the our list
-          our_list = current;//new node became the head of the list
-        }
-
-
-      break; //client doesnt excpect any respone.
-      case RENDEZVOUS_GET_REQUEST:
-        break;
-
-
-      case RENDEZVOUS_SET_REQUEST: /*client send only key and value len*/
-        key_exist = -1;
-      key_len = strlen(packet->pp.rndv_set_request.key) + 1;//get the length of key+null terminator
-      val_len = packet->pp.rndv_set_request.value_length;
-
-      while(curr!=NULL && key_exist==-1){
-
-          if(strcmp(curr->key, packet->pp.rndv_set_request.key)==0){//if key already exist
-              /*if exist - override by free the curr value and than calloc*/
-              key_exist=1;
-              free(curr->value);
-              curr->value = calloc(val_len,1);
-              mr_create = ibv_reg_mr(ctx->pd, curr->value, val_len, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-              /*creating set response for rkey and remote_addr*/
-              response_with_mr = (struct packet*) ctx->buf;//we create a respone packet
-              response_with_mr->type = RENDEZVOUS_SET_RESPONSE;
-              response_with_mr->pp.rndv_set_response.remote_address=mr_create->addr;
-              response_with_mr->pp.rndv_set_response.remote_key=mr_create->rkey;
-              response_size = sizeof(struct packet); ////can change to
-            }
-          else{
-              curr=curr->next;
-            }
-        }
-
-      if(key_exist==-1){//if key not exists - creating new friend in our list
-          curr = (struct list_of_pairs*)malloc(sizeof(struct list_of_pairs));//creating new node=pair
-
-          curr->key = calloc(key_len,1);//creating key
-          curr->value = calloc(val_len,1);//creating val
-          /*can write only the key*/
-          strcpy(curr->key, packet->pp.rndv_set_request.key);
 
 
 
-
-          mr_create = ibv_reg_mr(ctx->pd, curr->value, val_len, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-          /*creating set response for rkey and remote_addr*/
-          response_with_mr = (struct packet*) ctx->buf;//we create a respone packet
-          response_with_mr->type = RENDEZVOUS_SET_RESPONSE;
-          response_with_mr->pp.rndv_set_response.remote_address=mr_create->addr;
-          response_with_mr->pp.rndv_set_response.remote_key=mr_create->rkey;
-          response_size = sizeof(struct packet); ////can change to
-
-          curr->next = our_list;//adding this node to head of the our list
-          our_list = curr;//new node became the head of the list
-
-        }
-      break;
-
-#ifdef EX4
-      case FIND:
-        num_servers = packet->pp.find.num_of_servers;
-        inp_key = calloc((strlen(packet->pp.find.key)+1),1);
-        strcpy(inp_key,packet->pp.find.key);
-
-        /*hash fucntion = sums all the chars of the key and then mod num of servers*/
-        int i;
-        int sum=0;
-        for(i=0; i<strlen(inp_key); i++){
-            sum=sum+inp_key[i];
-        }
-
-        int server_location = sum%num_servers;
-
-        response_with_loc = (struct packet*) ctx->buf;//we create a respone packet
-        response_with_loc->type = LOCATION;
-        response_with_loc->pp.location.selected_server=server_location;
-        response_size = sizeof(struct packet);
-        break;
-
-#endif
-      default:
-        break;
-    }
-
-  if (response_size) {
-      pp_post_send(ctx, IBV_WR_SEND, response_size, NULL, NULL, 0);
-    }
-}
-
-int orig_main(struct kv_server_address *server, unsigned size, int argc, char *argv[], struct pingpong_context **result_ctx)
-{
+///////////////////////////// CLIENT ///////////////////////////////////
+int helper_open(char *servername, int argc, char *argv[], struct pingpong_context **save_ctx){
   struct ibv_device      **dev_list;
-  struct ibv_device	*ib_dev;
+  struct ibv_device       *ib_dev;
   struct pingpong_context *ctx;
   struct pingpong_dest     my_dest;
   struct pingpong_dest    *rem_dest;
-  struct timeval           start, end;
   char                    *ib_devname = NULL;
-  char                    *servername = server->servername;
-  int                      port = server->port;
+  int                      port = 4792;
   int                      ib_port = 1;
-  enum ibv_mtu		 mtu = IBV_MTU_1024;
-  int                      rx_depth = 1;
-  int                      iters = 1000;
+  enum ibv_mtu             mtu = IBV_MTU_2048;
+  int                      rx_depth = 6000;
+  int                      tx_depth = 6000;
+  int                      iters = 60000;
   int                      use_event = 0;
-  int                      routs;
-  int                      rcnt, scnt;
-  int                      num_cq_events = 0;
+  int                      size = 1048576L;
   int                      sl = 0;
-  int			 gidx = -1;
-  char			 gid[33];
+  int                      gidx = -1;
+  char                     gid[33];
 
   srand48(getpid() * time(NULL));
 
@@ -954,13 +905,6 @@ int orig_main(struct kv_server_address *server, unsigned size, int argc, char *a
         }
     }
 
-  /*if (optind == argc - 1)
-      servername = strdup(argv[optind]);
-  else if (optind < argc) {
-      usage(argv[0]);
-      return 1;
-  }*/
-
   page_size = sysconf(_SC_PAGESIZE);
 
   dev_list = ibv_get_device_list(NULL);
@@ -987,15 +931,9 @@ int orig_main(struct kv_server_address *server, unsigned size, int argc, char *a
         }
     }
 
-  ctx = pp_init_ctx(ib_dev, size, rx_depth, ib_port, use_event, !servername);
-  if (!ctx)
-    return 1;
+  ctx = pp_init_ctx(ib_dev, size, rx_depth, tx_depth, ib_port, use_event, !servername);
 
-  routs = pp_post_recv(ctx, ctx->rx_depth);
-  if (routs < ctx->rx_depth) {
-      fprintf(stderr, "Couldn't post receive (%d)\n", routs);
-      return 1;
-    }
+  if (!ctx) return 1;
 
   if (use_event)
     if (ibv_req_notify_cq(ctx->cq, 0)) {
@@ -1026,547 +964,158 @@ int orig_main(struct kv_server_address *server, unsigned size, int argc, char *a
   my_dest.qpn = ctx->qp->qp_num;
   my_dest.psn = lrand48() & 0xffffff;
   inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof gid);
-  printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-         my_dest.lid, my_dest.qpn, my_dest.psn, gid);
-
-
-  if (servername)
-    rem_dest = pp_client_exch_dest(servername, port, &my_dest);
+  fprintf(stdout, "1");
+  fflush(stdout);
+  if (servername) {
+      fprintf (stdout, "client");
+      fflush (stdout);
+      rem_dest = pp_client_exch_dest(servername, port, &my_dest);
+    }
   else
-    rem_dest = pp_server_exch_dest(ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+    {
+      fprintf (stdout, "server");
+      fflush (stdout);
+      rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+    }
 
   if (!rem_dest)
-    return 1;
-
+    {
+      fprintf (stdout, "errror??");
+      fflush (stdout);
+      return 1;
+    }
+  fprintf(stdout, "2");
+  fflush(stdout);
   inet_ntop(AF_INET6, &rem_dest->gid, gid, sizeof gid);
-  printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-         rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid);
 
   if (servername)
     if (pp_connect_ctx(ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
-      return 1;
-
+      {
+        return 1;
+      }
+  *save_ctx = ctx;
   ibv_free_device_list(dev_list);
   free(rem_dest);
-  *result_ctx = ctx;
+  fprintf(stdout, "connected");
+  fflush(stdout);
   return 0;
 }
 
 
-/* | NAME OF PROGRAM | -p PORT..  */
-int is_server(){
-  int i;
-  for(i=0; i<g_argc; i++){
-      if( (strcmp(g_argv[i],"-p"))==0 ){
-          return 1;}
-    }
-  return 0;
+int kv_open(char *servername, void **kv_handle) {
+  return helper_open (servername, argc_, argv_, (struct pingpong_context **)kv_handle);
 }
 
+//
+//void construct_set_message(struct handle *handle, int buffer, const char *key, const char *value, size_t keylen, size_t vallen, char protocol) {
+//  int ind = buffer * SIZE_BUFFER;
+//  char *buf = (char *)(&(handle->ctx->buf[ind]));
+//
+//  buf[0] = protocol;
+//  buf[1] = 's';
+//
+//  // Copy the key and value to the buffer
+//  memcpy(buf + SET_PREFIX_SIZE, key, keylen);
+//  memcpy(buf + SET_PREFIX_SIZE + keylen, value, vallen);
+//}
+//
+//
+//int kv_eager_set(struct handle *handle, const char *key, const char *value, size_t keylen, size_t vallen) {
+//  int free_buffer = get_buffer (handle);
+//
+//  construct_set_message (handle, free_buffer, key, value, keylen, vallen, 'e');
+//  if (pp_post_send (handle, free_buffer, free_buffer * SIZE_BUFFER)) {
+//      fprintf(stderr, "Client couldn't post send.\n");
+//      return 1;
+//    }
+//  return 0;
+//}
+//
+//int kv_send(struct handle *handle, const char *key, const char *value, size_t keylen, size_t vallen) {
+//  if (keylen + vallen > MAX_EAGER_MSG_SIZE - SET_PREFIX_SIZE) {
+//      if (kv_rend_set(handle, key, value, keylen, vallen)) {
+//          fprintf(stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
+//          return 1;
+//        }
+//    } else {
+//      if (kv_eager_set(handle, key, value, keylen, vallen)) {
+//          fprintf(stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
+//          return 1;
+//        }
+//    }
+//  return 0;
+//}
+//
+//int kv_set(void *kv_handle, const char *key, const char *value) {
+//  struct handle *handler = (struct handle*) kv_handle;
+//  return kv_send(handler, key, value, strlen(key) + 1, strlen(value) + 1);
+//}
+//
+//int kv_get(void *kv_handle, const char *key, char **value) {
+//  struct handle *handler = (struct handle*) kv_handle;
+//  // todo
+//}
 
-
-
-int pp_wait_completions(struct pingpong_context *ctx, int iters)
-{
-  int rcnt, scnt, num_cq_events, use_event = 0;
-  rcnt = scnt = 0;
-  while (rcnt + scnt < iters) {
-      struct ibv_wc wc[2];
-      int ne, i;
-
-      do {
-          ne = ibv_poll_cq(ctx->cq, 2, wc);
-          if (ne < 0) {
-              fprintf(stderr, "poll CQ failed %d\n", ne);
-              return 1;
-            }
-
-        } while (ne < 1);
-
-      for (i = 0; i < ne; ++i) {
-          if (wc[i].status != IBV_WC_SUCCESS) {
-              fprintf(stderr, "Failed status %s (%d) for wr_id %d\n",
-                      ibv_wc_status_str(wc[i].status),
-                      wc[i].status, (int) wc[i].wr_id);
-              return 1;
-            }
-
-          switch ((int) wc[i].wr_id) {
-              case PINGPONG_SEND_WRID:
-                scnt++;
-              break;
-
-              case PINGPONG_RECV_WRID:
-                if(is_server()==1){
-                    handle_server_packets_only(ctx, ctx->buf);}
-              pp_post_recv(ctx, 1);
-              rcnt++;
-              break;
-
-              default:
-                fprintf(stderr, "Completion for unknown wr_id %d\n",
-                        (int) wc[i].wr_id);
-              return 1;
-            }
-        }
-    }
-  return 0;
-}
-
-int kv_open(struct kv_server_address *server, void **kv_handle)
-{
-  return orig_main(server, EAGER_PROTOCOL_LIMIT, g_argc, g_argv, (struct pingpong_context **)kv_handle);
-}
-/*client want to sent EAGER_SET_REQUEST to server - so client need to sent key and value */
-int kv_set(void *kv_handle, const char *key, const char *value)
-{
-  struct pingpong_context *ctx = kv_handle;
-  struct packet *set_packet = (struct packet*)ctx->buf;
-
-  unsigned packet_size = strlen(key) + strlen(value) + sizeof(struct packet) + 2;
-  if (packet_size < (EAGER_PROTOCOL_LIMIT)) {
-      /* Eager protocol - exercise part 1 */
-      set_packet->type = EAGER_SET_REQUEST;
-      strcpy(set_packet->pp.eager_set_request.key_and_value, key);
-      strncpy(set_packet->pp.eager_set_request.key_and_value+strlen(key),"\0",1);
-      strcpy(set_packet->pp.eager_set_request.key_and_value+strlen(key)+1, value);//null between key and value
-      strncpy(set_packet->pp.eager_set_request.key_and_value+strlen(key)+1+strlen(value),"\0",1);
-      pp_post_send(ctx, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-      return pp_wait_completions(ctx, 1); /* await EAGER_SET_REQUEST completion */
-    }
-/*-------------------------------------------------------------------------------------------------*/
-  /* Otherwise, use RENDEZVOUS - exercise part 2 */
-  set_packet->type = RENDEZVOUS_SET_REQUEST;
-  packet_size = strlen(key)+sizeof(struct packet)+1;
-  /*client have key&value , will send him only the value length and the actual key*/
-  int val_len = strlen(value)+1;
-
-  set_packet->pp.rndv_set_request.value_length=val_len;
-  strcpy(set_packet->pp.rndv_set_request.key,key);
-
-  pp_post_recv(ctx, 1); /* Posts a receive-buffer for RENDEZVOUS_SET_RESPONSE */
-  pp_post_send(ctx, IBV_WR_SEND, sizeof(struct packet) + strlen(key) + 1, NULL, NULL, 0);
-
-  assert(pp_wait_completions(ctx, 2) == 0); /* wait for both to complete */
-  /*return means server created to us mr for key&value*/
-  assert(set_packet->type == RENDEZVOUS_SET_RESPONSE);
-  /*give remote_addr and then remote_key*/
-  /*server already write for me the key*/
-  void* remote_addr = set_packet->pp.rndv_set_response.remote_address;
-  uint32_t remote_k = set_packet->pp.rndv_set_response.remote_key;
-
-
-  /*client want to write in RDMA so must also do memory registration , and that will be by ctx->mr*/
-  struct ibv_mr* ctxMR = (struct ibv_mr*)ctx->mr;
-  struct ibv_mr* clientMR = ibv_reg_mr(ctx->pd, (void*)value, val_len, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-  ctx->mr = (struct ibv_mr*) clientMR;
-  pp_post_send(ctx, IBV_WR_RDMA_WRITE, val_len, value, remote_addr, remote_k);
-  int ret = pp_wait_completions(ctx, 1); /* wait for both to complete */
-  /*give ctx->mr the real mr he had*/
-  ctx->mr = (struct ibv_mr*) ctxMR;
-  ibv_dereg_mr(clientMR);
-  return ret;
-}
-
-
-
-
-/* client want to send EAGER_GET_REQUEST to server - so client need to sent key */
-int kv_get(void *kv_handle, const char *key, char **value)
-{
-  struct pingpong_context *ctx = kv_handle;
-  struct packet *get_packet = (struct packet*)ctx->buf;
-
-  unsigned packet_size = strlen(key) + sizeof(struct packet) +1;//one null - of key
-  if (packet_size < (EAGER_PROTOCOL_LIMIT)) { //ALWAYS BE <4Kb because of the assumption that key always<4kb
-      /* Eager protocol */
-      get_packet->type = EAGER_GET_REQUEST;
-      strcpy(get_packet->pp.eager_get_request.key, key);
-
-      pp_post_recv(ctx, 1); /*get the answer on the packet*/
-      pp_post_send(ctx, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-
-      pp_wait_completions(ctx, 2);
-      //wait for signal that the packet got to server and for the server will
-      //return the value of the key that the client just send.
-      //check if packet got response from kind rndv or eager (key always<4k but value can be this or bigger==rdnv)
-      struct packet* response_with_valORmr = (struct packet*)ctx->buf;
-      if(response_with_valORmr->type== EAGER_GET_RESPONSE){
-
-          *value = (char*)malloc(response_with_valORmr->pp.eager_get_response.value_length);
-          strcpy(*value, response_with_valORmr->pp.eager_get_response.value);
-          return 0;
-        }
-
-        /*Otherwise - use RENDEZVOUS  */ //server send only the len of value and not the val itself
-      else{
-          int val_len = response_with_valORmr->pp.rndv_get_response.value_length;
-          void* remote_addr = response_with_valORmr->pp.rndv_get_response.remote_address;
-          uint32_t remote_k = response_with_valORmr->pp.rndv_get_response.remote_key;
-
-          *value = calloc(val_len,1);
-          char* for_val = calloc(val_len,1);
-          struct ibv_mr* ctxMR = ctx->mr;
-          struct ibv_mr* clientMR = ibv_reg_mr(ctx->pd, (void*)for_val, val_len, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-          ctx->mr = (struct ibv_mr*) clientMR;
-          pp_post_send(ctx, IBV_WR_RDMA_READ, val_len, for_val, remote_addr, remote_k);
-          int ret = pp_wait_completions(ctx, 1); /* wait for both to complete */
-          ctx->mr = (struct ibv_mr*) ctxMR;
-          ibv_dereg_mr(clientMR);
-          strcpy(*value, for_val);
-          free(for_val);
-          return ret;
-        }
-
-    }
-  return 0;
-}
-
-void kv_release(char *value)
-{
+void kv_release(char *value) {
   free(value);
 }
 
-int kv_close(void *kv_handle)
-{
-  return pp_close_ctx((struct pingpong_context*)kv_handle);
+int kv_close(void *kv_handle) {
+  struct handle *handle = (struct handle*) kv_handle;
+  ibv_free_device_list(handle->dev_list);
+  free(handle->rem_dest);
+  hashmap_free(handle->map);
+  free(handle);
+  return 0;
 }
 
-#ifdef EX3
-#define my_open  kv_open
-#define set      kv_set
-#define get      kv_get
-#define release  kv_release
-#define my_close kv_close
-#endif /* EX3 */
-
-
-
-
-
-
-
-
-
-
-#ifdef EX4
-struct mkv_ctx {
-	unsigned num_servers;
-	struct pingpong_context *kv_ctxs[0];
-};
-
-int mkv_open(struct kv_server_address *servers, void **mkv_h)
-{
-	struct mkv_ctx *ctx;
-	unsigned count = 0;
-	while (servers[count++].servername); /* count servers */
-	ctx = malloc(sizeof(*ctx) + count * sizeof(void*));
-	if (!ctx) {
-		return 1;
-	}
-
-	ctx->num_servers = count -1;
-	for (count = 0; count < ctx->num_servers; count++) {
-		if (orig_main(&servers[count], EAGER_PROTOCOL_LIMIT, g_argc, g_argv, &ctx->kv_ctxs[count])) {
-			return 1;
-		}
-	}
-
-	*mkv_h = ctx;
-	return 0;
-}
-
-int mkv_set(void *mkv_h, unsigned kv_id, const char *key, const char *value)
-{
-	struct mkv_ctx *ctx = mkv_h;
-	return kv_set(ctx->kv_ctxs[kv_id], key, value);
-}
-
-int mkv_get(void *mkv_h, unsigned kv_id, const char *key, char **value)
-{
-	struct mkv_ctx *ctx = mkv_h;
-	return kv_get(ctx->kv_ctxs[kv_id], key, value);
-}
-
-void mkv_release(char *value)
-{
-	kv_release(value);
-}
-
-void mkv_close(void *mkv_h)
-{
-	unsigned count;
-	struct mkv_ctx *ctx = mkv_h;
-	for (count = 0; count < ctx->num_servers; count++) {
-		pp_close_ctx((struct pingpong_context*)ctx->kv_ctxs[count]);
-	}
-	free(ctx);
-}
-
-
-
-
-
-
-
-
-
-struct dkv_ctx {
-	struct mkv_ctx *mkv;
-	struct pingpong_context *indexer;
-};
-
-int dkv_open(struct kv_server_address *servers, /* array of servers */
-             struct kv_server_address *indexer, /* single indexer */
-             void **dkv_h)
-{
-	struct dkv_ctx *ctx = (struct dkv_ctx*) malloc(sizeof(struct dkv_ctx));
-	if (orig_main(indexer, EAGER_PROTOCOL_LIMIT, g_argc, g_argv, &ctx->indexer)) {
-		return 1;
-	}
-	if (mkv_open(servers, (void**)&ctx->mkv)) {
-		return 1;
-	}
-	*dkv_h = ctx;
-
-        return 0 ;
-}
-
-int dkv_set(void *dkv_h, const char *key, const char *value, unsigned length)
-{
-    struct dkv_ctx *ctx = dkv_h;
-    struct packet *set_packet = (struct packet*)ctx->indexer->buf;
-    unsigned packet_size = strlen(key) + sizeof(struct packet);
-
-    /* Step #1: The client sends the Index server FIND(key, #kv-servers) */
-    set_packet->type = FIND;
-    set_packet->pp.find.num_of_servers = ctx->mkv->num_servers;
-    strcpy(set_packet->pp.find.key, key);
-
-    pp_post_recv(ctx->indexer, 1); /* Posts a receive-buffer for LOCATION */
-    pp_post_send(ctx->indexer, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-    assert(pp_wait_completions(ctx->indexer, 2)==0); /* wait for both to complete */
-
-    /* Step #2: The Index server responds with LOCATION(#kv-server-id) */
-    assert(set_packet->type == LOCATION);
-
-    /* Step #3: The client contacts KV-server with the ID returned in LOCATION, using SET/GET messages. */
-    return mkv_set(ctx->mkv, set_packet->pp.location.selected_server, key, value);
-}
-
-int dkv_get(void *dkv_h, const char *key, char **value, unsigned *length)
-{
-    struct dkv_ctx *ctx = dkv_h;
-    struct packet *set_packet = (struct packet*)ctx->indexer->buf;
-    unsigned packet_size = strlen(key) + sizeof(struct packet);
-
-    /* Step #1: The client sends the Index server FIND(key, #kv-servers) */
-    set_packet->type = FIND;
-    set_packet->pp.find.num_of_servers = ctx->mkv->num_servers;
-    strcpy(set_packet->pp.find.key, key);
-
-    pp_post_recv(ctx->indexer, 1); /* Posts a receive-buffer for LOCATION */
-    pp_post_send(ctx->indexer, IBV_WR_SEND, packet_size, NULL, NULL, 0); /* Sends the packet to the server */
-    assert(pp_wait_completions(ctx->indexer, 2)==0); /* wait for both to complete */
-
-    /* Step #2: The Index server responds with LOCATION(#kv-server-id) */
-    assert(set_packet->type == LOCATION);
-
-    /* Step #3: The client contacts KV-server with the ID returned in LOCATION, using SET/GET messages. */
-    return mkv_get(ctx->mkv, set_packet->pp.location.selected_server, key, value);
-}
-
-void dkv_release(char *value)
-{
-	mkv_release(value);
-}
-
-int dkv_close(void *dkv_h)
-{
-	struct dkv_ctx *ctx = dkv_h;
-	pp_close_ctx(ctx->indexer);
-	mkv_close(ctx->mkv);
-	free(ctx);
-}
-
-void recursive_fill_kv(char const* dirname, void *dkv_h) {
-	struct dirent *curr_ent;
-	DIR* dirp = opendir(dirname);
-	if (dirp == NULL) {
-		return;
-	}
-
-	while ((curr_ent = readdir(dirp)) != NULL) {
-		if (!((strcmp(curr_ent->d_name, ".") == 0) ||
-		(strcmp(curr_ent->d_name, "..") == 0))) {
-			char* path = malloc(strlen(dirname) + strlen(curr_ent->d_name) + 2);
-			strcpy(path, dirname);
-			strcat(path, "/");
-			strcat(path, curr_ent->d_name);
-			if (curr_ent->d_type == DT_DIR) {
-				recursive_fill_kv(path, dkv_h);
-			} else if (curr_ent->d_type == DT_REG) {
-				int fd = open(path, O_RDONLY);
-				size_t fsize = lseek(fd, (size_t)0, SEEK_END);
-				void *p = mmap(0, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
-				/* TODO (1LOC): Add a print here to see you found the full paths... */
-				dkv_set(dkv_h, path, p, fsize);
-				munmap(p, fsize);
-				close(fd);
-			}
-			free(path);
-		}
-	}
-	closedir(dirp);
-}
-
-#define my_open    dkv_open
-#define set(a,b,c) dkv_set(a,b,c,strlen(c))
-#define get(a,b,c) dkv_get(a,b,c,&g_argc)
-#define release    dkv_release
-#define my_close   dkv_close
-#endif /* EX4 */
-
-
-
-
-struct kv_server_address parser_input(char* ip,char* port){
-  struct kv_server_address server = {
-      .servername = NULL,
-      .port = 0
-  };
-  char* srvname = calloc(strlen(ip)+1,1);
-  strcpy(srvname,ip);
-  server.servername =srvname;
-
-  server.port = atoi(port);
-
-  return server;
-
-
-
-}
-
-
-/*                     indexer  server1   server 2 ..
- *                     1    2    3  4      5   6
-/* | NAME OF PROGRAM | IP PORT  IP PORT   IP PORT   ..  */
-//struct kv_server_address run_client_get_indexer()//
-
-struct kv_server_address* run_client_get_servers(){
-  //len of server = argc - (1for-name-of-program + 2-for-indexer-inputs)
-  struct kv_server_address* servers= calloc(g_argc-3, sizeof(struct kv_server_address));
-  int i;
-  int place=2;
-  for(i=3; i<g_argc; i=i+2){
-      servers[place-2] = parser_input(g_argv[i],g_argv[i+1]);
-      place=place+1;
-    }
-
-  return servers;
-}
-
-
-
-
-/* argv0            argv1    argv2*/
-/*NAME OF PROGRAM    -P    PORT*/
-void run_server()
-{
-  struct pingpong_context *ctx;
-  struct kv_server_address server = {
-      .servername = 0,
-      .port = atoi(g_argv[2])
-
-  };
-  assert(0 == orig_main(&server, EAGER_PROTOCOL_LIMIT, g_argc, g_argv, &ctx));
-  while (0 <= pp_wait_completions(ctx, 1));
-  pp_close_ctx(ctx);
-}
-
-int main(int argc, char **argv)
-{
-  void *kv_ctx; /* handle to internal KV-client context */
-
-  char* send_buffer =(char*) malloc(MAX_TEST_SIZE); /*malloc to buff*/
-  char *recv_buffer;
-
-
-  g_argc = argc;
-  g_argv = argv;
-
-  /*IF SERVER / INDEXER*/
-  if (is_server()==1) {
-      run_server();
-    }
-
-
-    /******IF CLIENT*******/
-  else{
-
-      if(argc<3){
-          printf("Wrong Input\n");
-          return 1;
-        }
-
-      struct kv_server_address indexer[2] = {0};
-      struct kv_server_address *servers;
-      servers= run_client_get_servers();
-
-      char* srvname = calloc(strlen(argv[1])+1,1);
-      strcpy(srvname,argv[1]);
-      indexer[0].servername = srvname;
-      indexer[0].port = atoi(argv[2]);
-
-
-
-
-#ifdef EX4
-      assert(0 == my_open(servers, indexer, &kv_ctx));
-#else
-      assert(0 == my_open(&servers[0], &kv_ctx));
-#endif
-      /* Test small size */
-      assert(100 < MAX_TEST_SIZE);
-      memset(send_buffer, 'a', 100);
-      assert(0 == set(kv_ctx, "1", send_buffer));
-      assert(0 == get(kv_ctx, "1", &recv_buffer));
-      assert(0 == strcmp(send_buffer, recv_buffer));
-
-
-      release(recv_buffer);
-
-
-      /* Test logic */
-      assert(0 == set(kv_ctx, "test1", send_buffer));
-      assert(0 == get(kv_ctx, "test1", &recv_buffer));
-      assert(0 == strcmp(send_buffer, recv_buffer));
-      release(recv_buffer);
-      memset(send_buffer, 'b', 100);
-      assert(0 == set(kv_ctx, "1", send_buffer));
-      memset(send_buffer, 'c', 100);
-      assert(0 == set(kv_ctx, "22", send_buffer));
-      memset(send_buffer, 'b', 100);
-      assert(0 == get(kv_ctx, "1", &recv_buffer));
-      assert(0 == strcmp(send_buffer, recv_buffer));
-      release(recv_buffer);
-
-
-      /* Test large size */
-      memset(send_buffer, 'a', MAX_TEST_SIZE - 1);
-      assert(0 == set(kv_ctx, "1", send_buffer));
-      assert(0 == set(kv_ctx, "333", send_buffer));
-      assert(0 == get(kv_ctx, "1", &recv_buffer));
-      assert(0 == strcmp(send_buffer, recv_buffer));
-
-      release(recv_buffer);
-
-
-#ifdef EX4
-      recursive_fill_kv(TEST_LOCATION, kv_ctx);
-#endif
-      printf("Success\n");
-      my_close(kv_ctx);
+int get_servername(char ** servername, int argc, char **argv) {
+  argc_ = argc;
+  argv_ = argv;
+  if (optind == argc - 1)
+    *servername = strdup(argv[optind]);
+  else if (optind < argc) {
+      usage(argv[0]);
+      return 1;
     }
   return 0;
+}
+
+
+int main(int argc, char *argv[])
+{
+  char *servername;
+  if (get_servername(&servername, argc, argv) == 1) {
+    fprintf(stdout, "name error \n");
+  }
+
+//  argc_ = argc;
+//  argv_ = argv;
+//  if (optind == argc - 1)
+//    servername = strdup(argv[optind]);
+//  else if (optind < argc) {
+//      usage(argv[0]);
+//      return 1;
+//    }
+
+
+  struct handle *kv_handle;
+  if (servername){ //client
+      if (kv_open(servername, (void **) &kv_handle)){
+          fprintf(stderr, "Failed to connect.");
+          return 1;
+        }
+    }
+  else { // server
+      for (int i = 0; i < NUM_CLIENT; i++){
+          if (kv_open(NULL, (void **) &kv_handle)){
+              fprintf(stderr, "Failed to connect.");
+              return 1;
+            }
+        }
+    }
+//
+//  for (int i = 0; i < NUM_CLIENT; i++) {
+//      kv_open(NULL, &kv_handle[i]);
+//    }
 }
