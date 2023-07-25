@@ -582,8 +582,8 @@ static int pp_post_recv(struct handle *handle, int buffer)
 
 static int pp_post_send(struct handle *handle, int buffer, int ind_buffer)
 {
-  handle->ctx->free_set_bufs_amount--;
-  handle->ctx->buf[buffer] = 0;
+  handle->ctx->num_free_buffs--;
+  handle->ctx->free_buffs[buffer] = 0;
 
   struct ibv_sge list = {
       .addr	= (uintptr_t)(&(handle->ctx->buf[ind_buffer])),
