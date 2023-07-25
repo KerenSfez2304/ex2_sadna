@@ -971,7 +971,11 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
     rem_dest = pp_server_exch_dest(ctx, ib_port, mtu, port, sl, &my_dest, gidx);
 
   if (!rem_dest)
-    return 1;
+    {
+      fprintf (stdout, "errror??");
+      fflush (stdout);
+      return 1;
+    }
   fprintf(stdout, "2");
   fflush(stdout);
   inet_ntop(AF_INET6, &rem_dest->gid, gid, sizeof gid);
