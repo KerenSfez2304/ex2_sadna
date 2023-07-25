@@ -1067,7 +1067,7 @@ int main(int argc, char *argv[])
       usage(argv[0]);
       return 1;
     }
-
+  fprintf (stdout, "0");
   void *kv_handle[NUM_CLIENT];
 
   for (int i = 0; i < NUM_CLIENT; i++) {
