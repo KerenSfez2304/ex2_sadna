@@ -977,12 +977,12 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   if (servername)
     if (pp_connect_ctx(ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
       {
-        fprintf(stdout, "connected");
         return 1;
       }
   *save_ctx = ctx;
   ibv_free_device_list(dev_list);
   free(rem_dest);
+  fprintf(stdout, "connected");
   return 0;
 }
 
