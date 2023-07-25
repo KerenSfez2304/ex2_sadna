@@ -965,14 +965,16 @@ int helper_open(char *servername, int argc, char *argv[], struct pingpong_contex
   fprintf(stdout, "1");
   fflush(stdout);
   if (servername) {
-      rem_dest = pp_client_exch_dest(servername, port, &my_dest);
       fprintf (stdout, "client");
       fflush (stdout);
+      rem_dest = pp_client_exch_dest(servername, port, &my_dest);
     }
   else
-    { rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+    {
       fprintf (stdout, "server");
-      fflush (stdout);}
+      fflush (stdout);
+      rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+    }
 
   if (!rem_dest)
     {
