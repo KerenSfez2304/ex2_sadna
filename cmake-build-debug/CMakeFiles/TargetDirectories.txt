@@ -1,0 +1,3 @@
+/Users/kerensfez/Desktop/Madmah/ex3_sadna/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/kerensfez/Desktop/Madmah/ex3_sadna/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/kerensfez/Desktop/Madmah/ex3_sadna/cmake-build-debug/CMakeFiles/ex3_sadna.dir

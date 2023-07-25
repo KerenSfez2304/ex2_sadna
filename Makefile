@@ -1,10 +1,13 @@
-# Default target
-default: all
+all: server client
+ 
+server: bw_template.c map.o
+	gcc bw_template.c map.o -libverbs -o server
 
-all: clean bw_template
-
-bw_template: bw_template.c
-	gcc bw_template.c -libverbs -o server && ln -s server client
+client: server
+	ln -sf server client
+ 
+map.o: map.c map.h
+	gcc -c map.c -o map.o
 
 clean:
-	rm -rf ./client ./server
+	rm -f server client map.o

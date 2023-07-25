@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.1.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/RDMA_KV_Store.dir/ref1/map.c.o CMakeFiles/RDMA_KV_Store.dir/ref1/KVStore.c.o -o RDMA_KV_Store 
