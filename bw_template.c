@@ -1094,16 +1094,16 @@ int main(int argc, char *argv[])
 //    }
 
 
-  void *kv_handle[NUM_CLIENT];
+  struct handle *kv_handle;
   if (servername){ //client
-      if (kv_open(servername, &kv_handle)){
+      if (kv_open(servername, (void **) &kv_handle)){
           fprintf(stderr, "Failed to connect.");
           return 1;
         }
     }
   else { // server
       for (int i = 0; i < NUM_CLIENT; i++){
-          if (kv_open(NULL, &kv_handle)){
+          if (kv_open(NULL, (void **) &kv_handle)){
               fprintf(stderr, "Failed to connect.");
               return 1;
             }
