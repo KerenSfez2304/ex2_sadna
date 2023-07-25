@@ -1095,8 +1095,22 @@ int main(int argc, char *argv[])
 
 
   void *kv_handle[NUM_CLIENT];
-
-  for (int i = 0; i < NUM_CLIENT; i++) {
-      kv_open(NULL, &kv_handle[i]);
+  if (servername){ //client
+      if (kv_open(servername, &kv_handle)){
+          fprintf(stderr, "Failed to connect.");
+          return 1;
+        }
     }
+  else { // server
+      for (int i = 0; i < NUM_CLIENT; i++){
+          if (kv_open(NULL, &kv_handle)){
+              fprintf(stderr, "Failed to connect.");
+              return 1;
+            }
+        }
+    }
+//
+//  for (int i = 0; i < NUM_CLIENT; i++) {
+//      kv_open(NULL, &kv_handle[i]);
+//    }
 }
