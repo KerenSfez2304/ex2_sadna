@@ -1083,7 +1083,10 @@ int get_servername(char ** servername, int argc, char **argv) {
 int main(int argc, char *argv[])
 {
   char *servername;
-  get_servername(&servername, argc, argv);
+  if (!get_servername(&servername, argc, argv)) {
+    fprintf(stdout, "name error \n");
+  }
+
 //  argc_ = argc;
 //  argv_ = argv;
 //  if (optind == argc - 1)
