@@ -122,7 +122,9 @@ struct handle {
 struct KeyValueEntry {
     // todo: maybe malloc?
     char key[MAX_KEY_LENGTH];
-    char value[MAX_VALUE_LENGTH];
+    char* value;
+    char request_type;
+    char protocol;
     char status[MAX_STATUS_LENGTH]; // Additional status field
 };
 
@@ -1083,7 +1085,7 @@ int get_servername(char ** servername, int argc, char **argv) {
 int main(int argc, char *argv[])
 {
   char *servername;
-  if (!get_servername(&servername, argc, argv)) {
+  if (get_servername(&servername, argc, argv) == 1) {
     fprintf(stdout, "name error \n");
   }
 
