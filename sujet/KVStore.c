@@ -763,16 +763,6 @@ int allocate_server_rdma_buf(struct handle *handle, const char *value,
 
 int allocate_rdma_buf(struct handle *handle,
                       const char *value, size_t vallen, struct ibv_mr **mr){
-//  size_t rdma_buf_size = keylen + vallen;
-//  *rdma_buf = (char *) malloc(sizeof (char) * (rdma_buf_size));
-
-//  if (!(*rdma_buf)) {
-//      fprintf(stderr, "Couldn't allocate value.\n");
-//      return 1;
-//    }
-
-//  memcpy(*rdma_buf, key, keylen);
-//  memcpy(*rdma_buf + keylen, value, vallen);
 
   *mr= ibv_reg_mr(handle->ctx->pd, value, vallen,
                   IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ);
@@ -784,8 +774,8 @@ int allocate_rdma_buf(struct handle *handle,
   return 0;
 }
 
-int kv_rend_set(struct handle *handle, const char *key, const char *value,
-                 size_t keylen, size_t vallen){
+int kv_rdv_set(struct handle *handle, const char *key, const char *value,
+               size_t keylen, size_t vallen){
   // allocate RDMA buffer
   struct ibv_mr	*mr;
   allocate_rdma_buf (handle, value, vallen, &mr);

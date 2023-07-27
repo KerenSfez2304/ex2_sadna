@@ -1038,9 +1038,9 @@ int kv_open(struct kv_server_address *server, void **kv_handle)
 int kv_set(void *kv_handle, const char *key, const char *value)
 {
   struct pingpong_context *ctx = kv_handle;
-  struct packet *set_packet = (struct packet*)ctx->buf;
-
+  struct packet *set_packet = (struct packet*) ctx->buf;
   unsigned packet_size = strlen(key) + strlen(value) + sizeof(struct packet) + 2;
+
   if (packet_size < (EAGER_PROTOCOL_LIMIT)) {
       /* Eager protocol - exercise part 1 */
       set_packet->type = EAGER_SET_REQUEST;
