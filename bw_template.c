@@ -677,7 +677,6 @@ int pp_wait_completions (struct pingpong_context *ctx, int iters)
               return 1;
             }
 
-
           switch ((int) wc[i].wr_id)
             {
               case PINGPONG_SEND_WRID:
