@@ -1013,19 +1013,6 @@ int kv_open(char *servername, void **kv_handle) {
 }
 
 
-void construct_set_message(struct handle *handle, int buffer, const char *key, const char *value, size_t keylen, size_t vallen, char protocol) {
-  int ind = buffer * SIZE_BUFFER;
-  char *buf = (char *)(&(handle->ctx->buf[ind]));
-
-  buf[0] = protocol;
-  buf[1] = 's';
-
-  // Copy the key and value to the buffer
-  memcpy(buf + SET_PREFIX_SIZE, key, keylen);
-  memcpy(buf + SET_PREFIX_SIZE + keylen, value, vallen);
-}
-
-
 int kv_eager_set(struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value, size_t vallen) {
   packet->protocol = 'e';
   packet->request_type = 's';
