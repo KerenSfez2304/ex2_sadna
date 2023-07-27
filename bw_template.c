@@ -577,7 +577,7 @@ long double compute_throughput (int iters, size_t message_size, clock_t start_ti
 //  return 0;
 //}
 //
-static int pp_post_send(struct pingpong_context *ctx, enum ibv_wr_opcode opcode, unsigned size, const char *local_ptr, void *remote_ptr, uint32_t remote_key{
+static int pp_post_send(struct pingpong_context *ctx, enum ibv_wr_opcode opcode, unsigned size, const char *local_ptr, void *remote_ptr, uint32_t remote_key) {
   // todo: change => too similar w/ git ref
     struct ibv_sge list = {
       .addr	= (uintptr_t) (local_ptr ? local_ptr : ctx->buf),
@@ -1026,9 +1026,10 @@ void construct_set_message(struct handle *handle, int buffer, const char *key, c
 }
 
 
-int kv_eager_set(struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value) {
+int kv_eager_set(struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value, size_t vallen) {
   packet->protocol = 'e';
   packet->request_type = 's';
+  packet->value = (char *)malloc (vallen);
   strcpy(packet->key, key);
   strcpy(packet->value, value);
 
@@ -1039,76 +1040,32 @@ int kv_eager_set(struct pingpong_context *ctx, struct packet *packet, size_t pac
   return pp_wait_completions(ctx, 1);
 }
 
-int kv_rdv_set(struct pingpong_context *handle, const char *key, const char *value, size_t keylen, size_t vallen){
-  // allocate RDMA buffer
-  struct ibv_mr	*mr;
-  mr = ibv_reg_mr(handle->ctx->pd, value, vallen, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ);
-  if (!(mr)) {
-      fprintf(stderr, "Couldn't register MR\n");
+int kv_rdv_set(struct pingpong_context *ctx, struct packet *packet, const char *key, const char *value, size_t keylen, size_t vallen){
+  packet->protocol = 'r';
+  packet->request_type = 's';
+  size_t packet_size = keylen + sizeof(struct packet) + 1;
+  packet->value_length = vallen;
+  strcpy(packet->key, key);
+
+  pp_post_recv(ctx, 1); // todo: check this
+  pp_post_send(ctx, IBV_WR_SEND, sizeof(struct packet) + keylen, NULL, NULL, 0);
+
+  if (pp_wait_completions(ctx, 2) != 0) {
+      fprintf(stderr, "Client didn't get server's response\n");
       return 1;
-    }
+  }
 
-  // send ctrl message
-  int free_buffer = get_buffer(handle);
-  int ind = free_buffer * SIZE_BUFFER;
-  char *control_buf = (char *)(&(handle->ctx->buf[ind]));
+  struct ibv_mr* ctxMR = (struct ibv_mr*) ctx->mr;
+  struct ibv_mr* clientMR = ibv_reg_mr(ctx->pd, (void*)value, vallen, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
 
-  // the message format is rs{addr}{rkey}{value_len}{key}
+  ctx->mr = (struct ibv_mr*) clientMR;
+  pp_post_send(ctx, IBV_WR_RDMA_WRITE, vallen, value, packet->remote_addr, packet->remote_key);
 
-  control_buf[0] = 'r';
-  control_buf[1] = 's';
-  size_t addrlen = sizeof(void *);
-  size_t rkeylen = sizeof(uint32_t);
-  size_t vallen_size = sizeof(size_t);
+  int ret = pp_wait_completions(ctx, 1);
 
-  memcpy(control_buf + SET_PREFIX_SIZE, &(mr->addr), addrlen);
-  memcpy(control_buf + SET_PREFIX_SIZE + addrlen, &(mr->rkey), rkeylen);
-  memcpy(control_buf + SET_PREFIX_SIZE + addrlen + rkeylen, &vallen, vallen_size);
-  memcpy(control_buf + SET_PREFIX_SIZE + addrlen + rkeylen + vallen_size, key, keylen);
-
-  if (kv_post_send (handle, free_buffer, ind)) {
-      fprintf(stderr, "Client couldn't post send.\n");
-      return 1;
-    }
-
-  // wait for completions of work items, until the completion of this rend set request
-  do {
-      kv_wait_completions(handle, 1);
-    }
-  while(handle->last_wr_id != free_buffer);
-
-  // get fin - wait until the last completed item belongs to a post_recv
-  struct ibv_wc wc;
-  do {
-      if (kv_wait_completion_recv (handle, &wc) == 1) {
-          fprintf (stderr, "server couldn't poll for a completion queue item.");
-          return 1;
-        }
-    }
-  while(handle->last_wr_id > MAX_RECV_BUF_INDEX);
-
-  // verify that the received message was a FIN
-  int fin_buf_index = handle->last_wr_id * SET_BUFFER_SIZE;
-  char *fin_buf = (char *) &(handle->ctx->buf[fin_buf_index]);
-  if (!(fin_buf[0] == 'f' && fin_buf[1] == 'i' && fin_buf[2] == 'n')){
-      fprintf(stderr, "Received invalid message while waiting for rend set FIN from server."
-                      "messages received: %s", fin_buf);
-      return 1;
-    }
-
-  // reuse recv_buf
-  if (kv_post_recv(handle, handle->last_wr_id)){
-      fprintf(stderr, "failed to post_recv inside kv_rdv_set.\n");
-      return 1;
-    }
-
-  // free mr
-  if (ibv_dereg_mr(mr)) {
-      fprintf(stderr, "Couldn't deregister MR inside kv_rdv_set.\n");
-      return 1;
-    }
-
-  return 0;
+  ctx->mr = (struct ibv_mr*) ctxMR;
+  ibv_dereg_mr(clientMR);
+  return ret;
 }
 
 
@@ -1122,13 +1079,13 @@ int kv_set(void *kv_handle, const char *key, const char *value) {
   size_t packet_size = keylen + vallen + sizeof(struct packet);
 
   if (packet_size <= MAX_EAGER_MSG_SIZE - SET_PREFIX_SIZE) {
-      if (kv_eager_set(ctx, set_packet, packet_size, key, value)) {
+      if (kv_eager_set(ctx, set_packet, packet_size, key, value, vallen)) {
           fprintf(stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
           return 1;
         }
 
     } else {
-      if (kv_rdv_set (ctx, key, value, keylen, vallen)) {
+      if (kv_rdv_set (ctx, set_packet, key, value, keylen, vallen)) {
           fprintf(stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
           return 1;
         }
