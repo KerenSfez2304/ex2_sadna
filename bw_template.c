@@ -619,7 +619,7 @@ static int pp_post_send (struct pingpong_context *ctx, enum ibv_wr_opcode opcode
       .wr_id        = PINGPONG_SEND_WRID,
       .sg_list    = &list,
       .num_sge    = 1,
-      .ibv_wc     = opcode,
+      .opcode     = opcode,
       .send_flags = IBV_SEND_SIGNALED,
       .next       = NULL
   };
