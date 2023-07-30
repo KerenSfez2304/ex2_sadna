@@ -4,4 +4,4 @@ project(ex3_sadna C)
 set(CMAKE_C_STANDARD 11)
 
 add_executable(ex3_sadna
-        bw_template.c)
+        bw_template_us.c)
