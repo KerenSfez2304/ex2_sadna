@@ -615,14 +615,14 @@ static int pp_post_send (struct pingpong_context *ctx, enum ibv_wr_opcode opcode
       .length = size,
       .lkey    = ctx->mr->lkey
   };
-  struct ibv_send_wr wr = {
+  struct ibv_send_wr* bad_wr, wr = {
       .wr_id        = PINGPONG_SEND_WRID,
       .sg_list    = &list,
       .num_sge    = 1,
       .ibv_wc     = opcode,
       .send_flags = IBV_SEND_SIGNALED,
+      .next       = NULL
   };
-  struct ibv_send_wr *bad_wr;
 
   if (remote_ptr)
     {
