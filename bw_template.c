@@ -1278,7 +1278,8 @@ int kv_close(void *kv_handle) {
 
 int run_server(struct pingpong_context *clients_ctx[NUM_CLIENT]) {
   struct ibv_wc wc;
-
+  fprintf (stdout, "run_server");
+  fflush(stdout);
   while(true) {
       for (int i = 0; i < NUM_CLIENT; i++) {
           if (ibv_poll_cq(clients_ctx[i]->cq, 1, &wc) >= 1) {
