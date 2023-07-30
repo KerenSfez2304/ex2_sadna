@@ -1084,6 +1084,8 @@ helper_open (char *servername, int argc, char *argv[], struct pingpong_context *
   inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
   if (servername)
     {
+      fprintf (stdout, "_____");
+      fflush (stdout);
       fprintf (stdout, servername);
       fflush (stdout);
       fprintf (stdout, "_____");
