@@ -46,6 +46,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <infiniband/verbs.h>
+#include <stdbool.h>
 
 #define MAX_KEY_LENGTH  256
 #define MAX_VALUE_LENGTH 1024
@@ -887,7 +888,7 @@ void server_handle_request (struct pingpong_context *ctx)
             {
               return server_handle_eager_get (ctx, packet);
             } else {
-              pp_post_send (ctx, IBV_WR_SEND, packet, NULL, NULL, 0);
+              pp_post_send (ctx, IBV_WR_SEND, sizeof(packet), NULL, NULL, 0);
           }
         }
     }
