@@ -1311,12 +1311,12 @@ int main (int argc, char *argv[])
   if (servername)
     { //client
 
-      struct pingpong_context *kv_handle;
-      if (kv_open (servername, (void **) &kv_handle))
-        {
-          fprintf (stderr, "Failed to connect.");
-          return 1;
-        }
+//      struct pingpong_context *kv_handle;
+//      if (kv_open (servername, (void **) &kv_handle))
+//        {
+//          fprintf (stderr, "Failed to connect.");
+//          return 1;
+//        }
       run_tests_one_client(servername);
     }
 //      if (argc < 2){ // no input file
