@@ -1082,7 +1082,7 @@ helper_open (char *servername, int argc, char *argv[], struct pingpong_context *
   my_dest.qpn = ctx->qp->qp_num;
   my_dest.psn = lrand48 () & 0xffffff;
   inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
-  fprintf (stdout, "1");
+  fprintf (stdout, servername);
   fflush (stdout);
   if (servername)
     {
@@ -1309,8 +1309,6 @@ int main (int argc, char *argv[])
   if (servername)
     { //client
       struct pingpong_context *kv_handle;
-
-
       if (kv_open (servername, (void **) &kv_handle))
         {
           fprintf (stderr, "Failed to connect.");
