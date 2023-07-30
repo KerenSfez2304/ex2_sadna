@@ -46,6 +46,8 @@
 #include <netdb.h>
 #include <time.h>
 #include <infiniband/verbs.h>
+#include "tests.c"
+
 #include <stdbool.h>
 
 #define MAX_KEY_LENGTH  256
@@ -1306,14 +1308,17 @@ int main (int argc, char *argv[])
     }
 
 
-//  if (servername)
-//    { //client
-//      struct pingpong_context *kv_handle;
-//      if (kv_open (servername, (void **) &kv_handle))
-//        {
-//          fprintf (stderr, "Failed to connect.");
-//          return 1;
-//        }
+  if (servername)
+    { //client
+
+      struct pingpong_context *kv_handle;
+      if (kv_open (servername, (void **) &kv_handle))
+        {
+          fprintf (stderr, "Failed to connect.");
+          return 1;
+        }
+      run_tests_one_client(servername);
+    }
 //      if (argc < 2){ // no input file
 //          return 0;
 //        }
