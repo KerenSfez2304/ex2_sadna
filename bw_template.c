@@ -606,7 +606,6 @@ static int pp_post_recv (struct pingpong_context *ctx, int n)
   for (i = 0; i < n; ++i)
     if (ibv_post_recv (ctx->qp, &wr, &bad_wr))
       break;
-
   return i;
 }
 
@@ -876,6 +875,7 @@ bool get_status_writing(struct packet *packet) {
 void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf;
+
   if (packet->request_type == 'f') {
       set_status_non_writing (packet);
   }
@@ -1277,16 +1277,28 @@ int kv_close(void *kv_handle) {
 }
 
 int run_server(struct pingpong_context *clients_ctx[NUM_CLIENT]) {
-  struct ibv_wc wc;
-  fprintf (stdout, "run_server");
-  fflush(stdout);
+
+
+  for (int i = 0; i < NUM_CLIENT; i++) {
+      pp_post_recv (clients_ctx[i], 1);
+    }
+
   while(true) {
+
       for (int i = 0; i < NUM_CLIENT; i++) {
-          if (ibv_poll_cq(clients_ctx[i]->cq, 1, &wc) >= 1) {
+          struct ibv_wc wc[WC_BATCH];
+          int ne = ibv_poll_cq(clients_ctx[i]->cq, WC_BATCH, wc);
+
+          if (ne < 0) {
+              fprintf (stderr, "Err //todo write the good message");
+              return 1;
+          }
+
+          if (ne >= 1) {
               server_handle_request (clients_ctx[i]);
+              pp_post_recv (clients_ctx[i], 1);
               return 1;
             }
-
         }
   }
   return 0;
@@ -1320,57 +1332,7 @@ int main (int argc, char *argv[])
 //        }
       run_tests_one_client(servername);
     }
-//      if (argc < 2){ // no input file
-//          return 0;
-//        }
-//
-//      char operation[4];
-//      char *key = malloc(sizeof(char) * MAX_EAGER_MSG_SIZE);
-//      if (!key){
-//          fprintf(stderr, "failed to allocate memory for key.\n");
-//          return 1;
-//        }
-//
-//      FILE* input_file = fopen(argv[2], "r");
-//      if (input_file == NULL) {
-//          printf("Error opening the input file.\n");
-//          return 1;
-//        }
-//
-//      while (fscanf(input_file, "%s", operation) != EOF) {
-//          if (strcmp(operation, "GET") == 0) {
-//              char *value;
-//              fscanf(input_file, "%s", key);
-//              fprintf(stdout, "got here 1\n");
-//              fflush(stdout);
-//              if (kv_get(kv_handle, key, &value)){
-//                  fprintf(stderr, "failed to get value for key.\n");
-//                  return 1;
-//                }
-//              printf("GET %s: %s\n", key, value);
-//              kv_release(value);
-//            }
-//
-//          else if (strcmp(operation, "SET") == 0) {
-//              char *value = malloc(sizeof(char) * MEGABYTE);
-//              if (!value){
-//                  fprintf(stderr, "failed to allocate memory for value.\n");
-//                  return 1;
-//                }
-//              fscanf(input_file, "%s %s", key, value);
-//              printf("SET %s %s\n", key, value);
-//              if(kv_set(kv_handle, key, value)){
-//                  fprintf(stderr, "failed to set key-value pair.\n");
-//                  return 1;
-//                }
-//              kv_release(value);
-//            } else {
-//              printf("Invalid operation: %s\n", operation);
-//            }
-//        }
 
-//      free(key);
-//        kv_close(kv_handle);
 
 
   else
