@@ -727,6 +727,13 @@ int main(int argc, char *argv[])
       usage(argv[0]);
       return 1;
     }
+  if (servername)
+    {
+      fprintf (stdout, servername);
+      fflush (stdout);
+      fprintf (stdout, "_____");
+      fflush (stdout);
+    }
 
   page_size = sysconf(_SC_PAGESIZE);
 
