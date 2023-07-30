@@ -1310,7 +1310,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       return 0;
     }
   ctx->curr_buf = (ctx->curr_buf + 1) % MAX_HANDLE_REQUESTS;
-  return ret;
+  return 0;
 }
 
 void kv_release (char *value)
