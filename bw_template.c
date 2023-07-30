@@ -889,7 +889,7 @@ bool get_status_writing (struct packet *packet)
     }
 }
 
-int server_handle_request (struct pingpong_context *ctx)
+void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->curr_buf];
   // todo: later uncomment the comment
@@ -901,13 +901,13 @@ int server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') // eager-set
         {
-          return server_handle_eager_set (ctx, packet);
+          server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
           if (!get_status_writing (packet))
             {
-              return server_handle_eager_get (ctx, packet);
+              server_handle_eager_get (ctx, packet);
             }
 //          else // cannot treat the request for now, someone is already accessing the key
 //            {
@@ -919,7 +919,7 @@ int server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') //rdv-set
         {
-          return server_handle_rdv_set (ctx, packet);
+          server_handle_rdv_set (ctx, packet);
         }
     }
 }
@@ -1325,7 +1325,7 @@ int kv_close (void *kv_handle)
 
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
-  head = (struct keyNode *) malloc (sizeof (KeyNode));
+  head = (struct keyNode *) malloc (sizeof (struct keyNode));
 
   for (int i = 0; i < NUM_CLIENT; i++)
     {
