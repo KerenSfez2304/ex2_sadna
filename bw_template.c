@@ -1306,62 +1306,62 @@ int main (int argc, char *argv[])
     }
 
 
-  if (servername)
-    { //client
-      struct pingpong_context *kv_handle;
-      if (kv_open (servername, (void **) &kv_handle))
-        {
-          fprintf (stderr, "Failed to connect.");
-          return 1;
-        }
-      if (argc < 2){ // no input file
-          return 0;
-        }
-
-      char operation[4];
-      char *key = malloc(sizeof(char) * MAX_EAGER_MSG_SIZE);
-      if (!key){
-          fprintf(stderr, "failed to allocate memory for key.\n");
-          return 1;
-        }
-
-      FILE* input_file = fopen(argv[2], "r");
-      if (input_file == NULL) {
-          printf("Error opening the input file.\n");
-          return 1;
-        }
-
-      while (fscanf(input_file, "%s", operation) != EOF) {
-          if (strcmp(operation, "GET") == 0) {
-              char *value;
-              fscanf(input_file, "%s", key);
-              fprintf(stdout, "got here 1\n");
-              fflush(stdout);
-              if (kv_get(kv_handle, key, &value)){
-                  fprintf(stderr, "failed to get value for key.\n");
-                  return 1;
-                }
-              printf("GET %s: %s\n", key, value);
-              kv_release(value);
-            }
-
-          else if (strcmp(operation, "SET") == 0) {
-              char *value = malloc(sizeof(char) * MEGABYTE);
-              if (!value){
-                  fprintf(stderr, "failed to allocate memory for value.\n");
-                  return 1;
-                }
-              fscanf(input_file, "%s %s", key, value);
-              printf("SET %s %s\n", key, value);
-              if(kv_set(kv_handle, key, value)){
-                  fprintf(stderr, "failed to set key-value pair.\n");
-                  return 1;
-                }
-              kv_release(value);
-            } else {
-              printf("Invalid operation: %s\n", operation);
-            }
-        }
+//  if (servername)
+//    { //client
+//      struct pingpong_context *kv_handle;
+//      if (kv_open (servername, (void **) &kv_handle))
+//        {
+//          fprintf (stderr, "Failed to connect.");
+//          return 1;
+//        }
+//      if (argc < 2){ // no input file
+//          return 0;
+//        }
+//
+//      char operation[4];
+//      char *key = malloc(sizeof(char) * MAX_EAGER_MSG_SIZE);
+//      if (!key){
+//          fprintf(stderr, "failed to allocate memory for key.\n");
+//          return 1;
+//        }
+//
+//      FILE* input_file = fopen(argv[2], "r");
+//      if (input_file == NULL) {
+//          printf("Error opening the input file.\n");
+//          return 1;
+//        }
+//
+//      while (fscanf(input_file, "%s", operation) != EOF) {
+//          if (strcmp(operation, "GET") == 0) {
+//              char *value;
+//              fscanf(input_file, "%s", key);
+//              fprintf(stdout, "got here 1\n");
+//              fflush(stdout);
+//              if (kv_get(kv_handle, key, &value)){
+//                  fprintf(stderr, "failed to get value for key.\n");
+//                  return 1;
+//                }
+//              printf("GET %s: %s\n", key, value);
+//              kv_release(value);
+//            }
+//
+//          else if (strcmp(operation, "SET") == 0) {
+//              char *value = malloc(sizeof(char) * MEGABYTE);
+//              if (!value){
+//                  fprintf(stderr, "failed to allocate memory for value.\n");
+//                  return 1;
+//                }
+//              fscanf(input_file, "%s %s", key, value);
+//              printf("SET %s %s\n", key, value);
+//              if(kv_set(kv_handle, key, value)){
+//                  fprintf(stderr, "failed to set key-value pair.\n");
+//                  return 1;
+//                }
+//              kv_release(value);
+//            } else {
+//              printf("Invalid operation: %s\n", operation);
+//            }
+//        }
 
       free(key);
 //        kv_close(kv_handle);
