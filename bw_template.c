@@ -1082,10 +1082,13 @@ helper_open (char *servername, int argc, char *argv[], struct pingpong_context *
   my_dest.qpn = ctx->qp->qp_num;
   my_dest.psn = lrand48 () & 0xffffff;
   inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
-  fprintf (stdout, servername);
-  fflush (stdout);
-  fprintf (stdout, "_____");
-  fflush (stdout);
+  if (servername)
+    {
+      fprintf (stdout, servername);
+      fflush (stdout);
+      fprintf (stdout, "_____");
+      fflush (stdout);
+    }
   if (servername)
     {
       fprintf (stdout, "client");
