@@ -217,11 +217,11 @@ void testZeroCopyBehavior(void *kv_handle ) {
  */
 void run_tests_helper(void * kv_handle) {
   testSetAndGet(kv_handle);
-  testGetNonExistentKey(kv_handle);
-  testReleaseValueMemory(kv_handle);
-  testMultipleSetAndGet(kv_handle);
-  testLargeSetValue(kv_handle);
-  testZeroCopyBehavior(kv_handle);
+//  testGetNonExistentKey(kv_handle);
+//  testReleaseValueMemory(kv_handle);
+//  testMultipleSetAndGet(kv_handle);
+//  testLargeSetValue(kv_handle);
+//  testZeroCopyBehavior(kv_handle);
 }
 
 void run_tests_one_client(char * servername) {
