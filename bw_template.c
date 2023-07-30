@@ -1363,10 +1363,10 @@ int main (int argc, char *argv[])
 //            }
 //        }
 
-      free(key);
+//      free(key);
 //        kv_close(kv_handle);
 
-    }
+
   else
     { // server
       struct pingpong_context *kv_handle[NUM_CLIENT];
