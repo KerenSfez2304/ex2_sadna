@@ -1273,21 +1273,6 @@ int kv_close(void *kv_handle) {
   return pp_close_ctx((struct pingpong_context *) kv_handle);
 }
 
-int get_servername (char **servername, int argc, char **argv)
-{
-  argc_ = argc;
-  argv_ = argv;
-  if (optind == argc - 1)
-    *servername = strdup (argv[optind]);
-  else if (optind < argc)
-    {
-      usage (argv[0]);
-      return 1;
-    }
-  return 0;
-}
-
-
 int run_server(struct pingpong_context *clients_ctx[NUM_CLIENT]) {
   struct ibv_wc wc;
 
@@ -1306,10 +1291,17 @@ int run_server(struct pingpong_context *clients_ctx[NUM_CLIENT]) {
 
 int main (int argc, char *argv[])
 {
-  char *servername;
-  if (get_servername (&servername, argc, argv) == 1)
+  char *servername = NULL;
+  srand48(getpid() * time(NULL));
+
+  argc_ = argc;
+  argv_ = argv;
+  if (optind == argc - 1 || optind == argc - 2)
+    servername = strdup (argv[optind]);
+  else if (optind < argc)
     {
-      fprintf (stdout, "name error \n");
+      usage (argv[0]);
+      return 1;
     }
 
 
@@ -1321,6 +1313,7 @@ int main (int argc, char *argv[])
           fprintf (stderr, "Failed to connect.");
           return 1;
         }
+//        kv_close(kv_handle);
     }
   else
     { // server
@@ -1334,6 +1327,8 @@ int main (int argc, char *argv[])
             }
         }
 //      run_server (kv_handle);
+//      kv_close(kv_handle);
     }
+
 
 }
