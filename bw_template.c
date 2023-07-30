@@ -889,7 +889,7 @@ bool get_status_writing (struct packet *packet)
     }
 }
 
-void server_handle_request (struct pingpong_context *ctx)
+int server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->curr_buf];
   // todo: later uncomment the comment
@@ -1294,7 +1294,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
                                             | IBV_ACCESS_LOCAL_WRITE);
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) clientMR;
       ctx->size = vallen;
-      if (pp_post_send(ctx, IBV_WR_RDMA_READ, *for_val, get_packet->remote_addr, get_packet->remote_key)) {
+      if (pp_post_send(ctx, IBV_WR_RDMA_READ, for_val, get_packet->remote_addr, get_packet->remote_key)) {
           fprintf(stderr, "Error sending the packet");
           return 1;
         }
@@ -1325,7 +1325,7 @@ int kv_close (void *kv_handle)
 
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
-  head = (struct keyNode *) malloc (sizeof (struct KeyNode));
+  head = (struct keyNode *) malloc (sizeof (KeyNode));
 
   for (int i = 0; i < NUM_CLIENT; i++)
     {
