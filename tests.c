@@ -7,6 +7,7 @@
 #define RED     "\033[31m"      /* Red */
 #define GREEN   "\033[32m"      /* Green */
 
+
 // ------------------------- Helper Functions -------------------------
 
 int compareStrings(const char *str1, const char *str2) {
