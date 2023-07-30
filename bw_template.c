@@ -62,7 +62,7 @@
 #define WC_BATCH (1)
 #define ITER_WARM_UP 6000
 #define SET_PREFIX_SIZE 2
-#define NUM_CLIENT 2
+#define NUM_CLIENT 1
 
 int argc_;
 char **argv_;
