@@ -1326,7 +1326,7 @@ int main (int argc, char *argv[])
               return 1;
             }
         }
-//      run_server (kv_handle);
+      run_server (kv_handle);
 //      kv_close(kv_handle);
     }
 
