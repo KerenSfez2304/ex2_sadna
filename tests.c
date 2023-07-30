@@ -55,6 +55,8 @@ void testSetAndGet(void *kv_handle) {
           printf(GREEN "Test Case 2: SET request successful.\n" RESET);
           char *retrievedValue = NULL;
           result = kv_get(kv_handle, key, &retrievedValue);
+          fprintf(stderr, retrievedValue);
+          fprintf(stderr, value);
           if (result == 0 && compareStrings(retrievedValue, value)) {
               printf(GREEN "Test Case 2: GET request successful.\n" RESET);
             } else {
