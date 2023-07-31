@@ -901,12 +901,16 @@ void server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') // eager-set
         {
+          fprintf(stderr, "1");
+          fflush(stderr);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
           if (!get_status_writing (packet))
             {
+              fprintf(stderr, "2");
+              fflush(stderr);
               server_handle_eager_get (ctx, packet);
             }
 //          else // cannot treat the request for now, someone is already accessing the key
