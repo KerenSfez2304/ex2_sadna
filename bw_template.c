@@ -234,8 +234,7 @@ static int pp_connect_ctx (struct pingpong_context *ctx, int port, int my_psn,
   return 0;
 }
 
-static struct pingpong_dest *
-pp_client_exch_dest (const char *servername, int port,
+static struct pingpong_dest *pp_client_exch_dest (const char *servername, int port,
                      const struct pingpong_dest *my_dest)
 {
   struct addrinfo *res, *t;
@@ -419,8 +418,7 @@ static struct pingpong_dest *pp_server_exch_dest (struct pingpong_context *ctx,
 
 #include <sys/param.h>
 
-static struct pingpong_context *
-pp_init_ctx (struct ibv_device *ib_dev, int size,
+static struct pingpong_context *pp_init_ctx (struct ibv_device *ib_dev, int size,
              int rx_depth, int tx_depth, int port,
              int use_event, int is_server)
 {
@@ -712,8 +710,7 @@ static void usage (const char *argv0)
   printf ("  -g, --gid-idx=<gid index> local port gid index\n");
 }
 
-long double
-compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
+long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
 {
   long double diff_time =
       (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
