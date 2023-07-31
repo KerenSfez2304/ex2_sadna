@@ -50,7 +50,7 @@
 #include <infiniband/verbs.h>
 
 // ------------------ IMPORT TESTS ------------------
-#include "tests.c"
+#include "../tests.c"
 // ------------------ IMPORT TESTS ------------------
 
 #define WC_BATCH (1)

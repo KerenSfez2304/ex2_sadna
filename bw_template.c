@@ -1284,12 +1284,12 @@ int kv_get (void *kv_handle, const char *key, char **value)
       strcpy(*value, get_packet->value);
     }
   else
-    {
+    { //rdv
       size_t vallen = get_packet->value_length;
-      *value = calloc (vallen, 1);
-      char *for_val = calloc (vallen, 1);
+//      *for_val = calloc (vallen, 1);
+      *value = malloc (vallen);
       struct ibv_mr *ctxMR = ctx->mr[ctx->curr_buf];
-      struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) for_val, vallen,
+      struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) *value, vallen,
                                             IBV_ACCESS_REMOTE_WRITE
                                             | IBV_ACCESS_LOCAL_WRITE);
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) clientMR;
@@ -1305,8 +1305,8 @@ int kv_get (void *kv_handle, const char *key, char **value)
         }
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) ctxMR;
       ibv_dereg_mr (clientMR);
-      strcpy(*value, for_val);
-      free (for_val);
+//      strcpy(*value, for_val);
+//      free (for_val);
       return 0;
     }
   ctx->curr_buf = (ctx->curr_buf + 1) % MAX_HANDLE_REQUESTS;
