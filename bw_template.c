@@ -729,7 +729,8 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
 ///////////////////////////// SERVER ///////////////////////////////////
 
 
-void server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
+void
+server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
 {
   struct keyNode *curr = head;
   bool key_exist = false;
@@ -749,8 +750,10 @@ void server_handle_eager_set (struct pingpong_context *ctx, struct packet *packe
       curr = curr->next;
     }
 
-    struct keyNode *new_head = (struct keyNode *) malloc ( sizeof (struct keyNode));
-    new_head->value = calloc (vallen, 1);
+  fprintf (stderr, "before?\n");
+  fflush (stderr);
+  struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
+  new_head->value = calloc (vallen, 1);
 //    strcpy(new_head->key, packet->key);
 //    strcpy(new_head->value, packet->value);
   strncpy(new_head->key, packet->key, MAX_EAGER_MSG_SIZE - 1);
@@ -759,8 +762,8 @@ void server_handle_eager_set (struct pingpong_context *ctx, struct packet *packe
   strncpy(new_head->value, packet->value, vallen - 1);
   new_head->value[vallen - 1] = '\0'; // Ensure null termination
 
-    new_head->next = head;
-    head = new_head;
+  new_head->next = head;
+  head = new_head;
 }
 
 int server_handle_eager_get (
@@ -802,30 +805,38 @@ int server_handle_eager_get (
       curr = curr->next;
     }
 
-  if (key_exist) {
-      if (pp_post_send(ctx, IBV_WR_SEND, NULL, NULL, 0)) {
-          fprintf(stderr, "Error sending the value");
+  if (key_exist)
+    {
+      if (pp_post_send (ctx, IBV_WR_SEND, NULL, NULL, 0))
+        {
+          fprintf (stderr, "Error sending the value");
           return 1;
         }
-      if(pp_wait_completions(ctx, 1)) {
-          fprintf(stderr, "Error in value completion");
+      if (pp_wait_completions (ctx, 1))
+        {
+          fprintf (stderr, "Error in value completion");
           return 1;
         }
-  }  else {
+    }
+  else
+    {
       packet->protocol = 'e';
       strcpy(packet->value, "");
-      if (pp_post_send(ctx, IBV_WR_SEND, NULL, NULL, 0)) {
-          fprintf(stderr, "Error sending the value");
+      if (pp_post_send (ctx, IBV_WR_SEND, NULL, NULL, 0))
+        {
+          fprintf (stderr, "Error sending the value");
           return 1;
         }
-      if(pp_wait_completions(ctx, 1)) {
-          fprintf(stderr, "Error in value completion");
+      if (pp_wait_completions (ctx, 1))
+        {
+          fprintf (stderr, "Error in value completion");
           return 1;
         }
-  }
+    }
 }
 
-void server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
+void
+server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
 {
   struct keyNode *curr = head;
   bool key_exist = false;
@@ -850,7 +861,6 @@ void server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
         }
       curr = curr->next;
     }
-
 
   if (!key_exist)
     {
@@ -907,16 +917,16 @@ void server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') // eager-set
         {
-          fprintf(stderr, "1");
-          fflush(stderr);
+          fprintf (stderr, "1");
+          fflush (stderr);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
           if (!get_status_writing (packet))
             {
-              fprintf(stderr, "2");
-              fflush(stderr);
+              fprintf (stderr, "2");
+              fflush (stderr);
               server_handle_eager_get (ctx, packet);
             }
 //          else // cannot treat the request for now, someone is already accessing the key
@@ -935,15 +945,16 @@ void server_handle_request (struct pingpong_context *ctx)
 
   ///
 
-  struct keyNode* curr = head;
+  struct keyNode *curr = head;
   fprintf (stderr, (const char *) (curr == NULL));
-  fflush(stderr);
-  while (curr != NULL) {
+  fflush (stderr);
+  while (curr != NULL)
+    {
       fprintf (stderr, curr->key);
       fprintf (stderr, " - ");
       fprintf (stderr, curr->value);
-      fprintf (stderr,  "\n");
-      fflush(stderr);
+      fprintf (stderr, "\n");
+      fflush (stderr);
       curr = curr->next;
     }
   ///
@@ -1196,8 +1207,9 @@ kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t packet
       return 1;
     }
 
-  if (pp_wait_completions(ctx, 1) != 0) {
-      fprintf(stderr, "Error during completion");
+  if (pp_wait_completions (ctx, 1) != 0)
+    {
+      fprintf (stderr, "Error during completion");
       return 1;
     }
   return 0;
@@ -1212,18 +1224,21 @@ kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char *key
   strcpy(packet->key, key);
   ctx->size = vallen;
 
-  if (pp_post_send(ctx, IBV_WR_SEND, NULL, NULL, 0)) {
-      fprintf(stderr, "Error sending the request");
+  if (pp_post_send (ctx, IBV_WR_SEND, NULL, NULL, 0))
+    {
+      fprintf (stderr, "Error sending the request");
       return 1;
     }
 
-  if (pp_post_recv (ctx, 1) != 1) {
-      fprintf(stderr, "Error receiving the get eager request");
+  if (pp_post_recv (ctx, 1) != 1)
+    {
+      fprintf (stderr, "Error receiving the get eager request");
       return 1;
     }
 
-  if(pp_wait_completions(ctx, 2) != 0) {
-      fprintf(stderr, "Error during completion");
+  if (pp_wait_completions (ctx, 2) != 0)
+    {
+      fprintf (stderr, "Error during completion");
       return 1;
     }
 
@@ -1288,18 +1303,21 @@ int kv_get (void *kv_handle, const char *key, char **value)
   strcpy(get_packet->key, key);
   ctx->size = sizeof (struct packet);
 
-  if (pp_post_send(ctx, IBV_WR_SEND, NULL, NULL, 0)) {
-      fprintf(stderr, "Error sending the get eager request");
+  if (pp_post_send (ctx, IBV_WR_SEND, NULL, NULL, 0))
+    {
+      fprintf (stderr, "Error sending the get eager request");
       return 1;
     }
 
-  if (pp_post_recv (ctx, 1) != 1) {
-      fprintf(stderr, "Error receiving the get eager request");
+  if (pp_post_recv (ctx, 1) != 1)
+    {
+      fprintf (stderr, "Error receiving the get eager request");
       return 1;
     }
 
-  if(pp_wait_completions(ctx, 2) != 0) {
-      fprintf(stderr, "Error during completion");
+  if (pp_wait_completions (ctx, 2) != 0)
+    {
+      fprintf (stderr, "Error during completion");
       return 1;
     }
 
@@ -1320,13 +1338,15 @@ int kv_get (void *kv_handle, const char *key, char **value)
                                             | IBV_ACCESS_LOCAL_WRITE);
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) clientMR;
       ctx->size = vallen;
-      if (pp_post_send(ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key)) {
-          fprintf(stderr, "Error sending the packet");
+      if (pp_post_send (ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key))
+        {
+          fprintf (stderr, "Error sending the packet");
           return 1;
         }
 
-      if(pp_wait_completions(ctx, 1) != 0) {
-          fprintf(stderr, "Error during completion");
+      if (pp_wait_completions (ctx, 1) != 0)
+        {
+          fprintf (stderr, "Error during completion");
           return 1;
         }
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) ctxMR;
