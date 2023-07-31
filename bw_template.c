@@ -903,7 +903,10 @@ void server_handle_request (struct pingpong_context *ctx)
         {
           server_handle_eager_set (ctx, packet);
           ///
+
           struct keyNode*curr = head;
+          fprintf (stderr,  curr == NULL);
+          fflush(stderr);
           while (curr != NULL) {
               fprintf (stderr, curr->key);
               fprintf (stderr, " - ");
