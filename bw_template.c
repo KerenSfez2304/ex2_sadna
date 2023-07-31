@@ -61,7 +61,7 @@
 int argc_;
 char **argv_;
 struct keyNode *head = NULL;
-struct packetNode* waiting_queue = NULL;
+struct packetNode *waiting_queue = NULL;
 static int page_size;
 
 enum {
@@ -77,8 +77,8 @@ struct keyNode {
 };
 
 struct packetNode {
-    struct keyNode* node;
-    struct packet* packet_;
+    struct keyNode *node;
+    struct pingpong_context *ctx;
     struct packetNode *next;
 };
 
@@ -234,7 +234,8 @@ static int pp_connect_ctx (struct pingpong_context *ctx, int port, int my_psn,
   return 0;
 }
 
-static struct pingpong_dest *pp_client_exch_dest (const char *servername, int port,
+static struct pingpong_dest *
+pp_client_exch_dest (const char *servername, int port,
                      const struct pingpong_dest *my_dest)
 {
   struct addrinfo *res, *t;
@@ -418,7 +419,8 @@ static struct pingpong_dest *pp_server_exch_dest (struct pingpong_context *ctx,
 
 #include <sys/param.h>
 
-static struct pingpong_context *pp_init_ctx (struct ibv_device *ib_dev, int size,
+static struct pingpong_context *
+pp_init_ctx (struct ibv_device *ib_dev, int size,
              int rx_depth, int tx_depth, int port,
              int use_event, int is_server)
 {
@@ -710,7 +712,8 @@ static void usage (const char *argv0)
   printf ("  -g, --gid-idx=<gid index> local port gid index\n");
 }
 
-long double compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
+long double
+compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t end_time)
 {
   long double diff_time =
       (long double) (end_time - start_time) / CLOCKS_PER_SEC * 1000000L;
@@ -755,7 +758,7 @@ server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
   strncpy(new_head->value, packet->value, vallen - 1);
   new_head->value[vallen - 1] = '\0'; // Ensure null termination
 
-  new_head->next = head;
+  new_head->next = curr;
   head = new_head;
 }
 
@@ -858,12 +861,21 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   if (!key_exist)
     {
       curr = (struct keyNode *) malloc (sizeof (struct keyNode));
-      curr->value = calloc (vallen, 1);
-      curr->writing = true;
+      if (curr == NULL)
+        {
+          fprintf (stdout, "Fail allocating memory");
+        }
+
+      curr->value = (char *) malloc (vallen + 1);
+      if (curr->value == NULL)
+        {
+          fprintf (stdout, "Fail allocating memory");
+        }
       strcpy(curr->key, packet->key);
       mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
                               IBV_ACCESS_REMOTE_WRITE
                               | IBV_ACCESS_LOCAL_WRITE);
+      curr->writing = true;
       packet->remote_addr = mr_create->addr;
       packet->remote_key = mr_create->rkey;
       curr->next = head;
@@ -885,47 +897,53 @@ void set_status_non_writing (struct packet *packet)
     }
 }
 
-bool get_status_writing (struct packet *packet)
+struct keyNode *get_status_writing (struct packet *packet)
 {
   struct keyNode *curr = head;
   while (curr != NULL)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          return curr->writing;
+          return curr;
         }
       curr = curr->next;
     }
+  return curr;
 }
 
 void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->curr_buf];
   // todo: later uncomment the comment
-//  if (packet->request_type == 'f')
-//    {
-//      set_status_non_writing (packet);
-//    }
+  if (packet->request_type == 'f')
+    {
+      set_status_non_writing (packet);
+    }
+
+  struct keyNode *currNode = get_status_writing (packet);
+  if (currNode)
+    { // the status of the key-value is on writing state
+      // todo: add the request to the waiting queue
+      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
+      if (newQueue == NULL)
+        {
+          fprintf (stdout, "Fail allocating memory");
+        }
+      newQueue->ctx = ctx;
+      newQueue->node = currNode;
+      newQueue->next = waiting_queue;
+      waiting_queue = newQueue;
+      return;
+    }
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
         {
-          fprintf (stderr, "1");
-          fflush (stderr);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
-          if (!get_status_writing (packet))
-            {
-              fprintf (stderr, "2");
-              fflush (stderr);
-              server_handle_eager_get (ctx, packet);
-            }
-//          else // cannot treat the request for now, someone is already accessing the key
-//            {
-//              pp_post_send (ctx, IBV_WR_SEND, sizeof (packet), NULL, NULL, 0);
-//            }
+          server_handle_eager_get (ctx, packet);
         }
     }
   else // rdv
@@ -936,7 +954,7 @@ void server_handle_request (struct pingpong_context *ctx)
         }
     }
 
-  ///
+  /// todo: delete this
 
   struct keyNode *curr = head;
   fprintf (stderr, (const char *) (curr == NULL));
@@ -1365,6 +1383,7 @@ int kv_close (void *kv_handle)
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
+  waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
 
   for (int i = 0; i < NUM_CLIENT; i++)
     {
@@ -1381,6 +1400,18 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
   while (true)
     {
+
+      struct packetNode *curr = waiting_queue;
+      while (curr != NULL)
+        {
+          if (!curr->node->writing)
+            {
+              server_handle_request (curr->ctx);
+              break;
+            }
+          curr = curr->next;
+        }
+
       for (int i = 0; i < NUM_CLIENT; i++)
         {
           struct ibv_wc wc[WC_BATCH];
