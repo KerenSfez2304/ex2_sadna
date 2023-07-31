@@ -751,8 +751,14 @@ void server_handle_eager_set (struct pingpong_context *ctx, struct packet *packe
 
     struct keyNode *new_head = (struct keyNode *) malloc ( sizeof (struct keyNode));
     new_head->value = calloc (vallen, 1);
-    strcpy(new_head->key, packet->key);
-    strcpy(new_head->value, packet->value);
+//    strcpy(new_head->key, packet->key);
+//    strcpy(new_head->value, packet->value);
+  strncpy(new_head->key, packet->key, MAX_EAGER_MSG_SIZE - 1);
+  new_head->key[MAX_EAGER_MSG_SIZE - 1] = '\0'; // Ensure null termination
+
+  strncpy(new_head->value, packet->value, vallen - 1);
+  new_head->value[vallen - 1] = '\0'; // Ensure null termination
+
     new_head->next = head;
     head = new_head;
 }
