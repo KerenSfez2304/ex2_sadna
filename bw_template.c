@@ -902,6 +902,17 @@ void server_handle_request (struct pingpong_context *ctx)
       if (packet->request_type == 's') // eager-set
         {
           server_handle_eager_set (ctx, packet);
+          ///
+          struct keyNode*curr = head;
+          while (curr != NULL) {
+              fprintf (stderr, curr->key);
+              fprintf (stderr, " - ");
+              fprintf (stderr, curr->value);
+              fprintf (stderr,  "\n");
+              fflush(stderr);
+              curr = curr->next;
+            }
+          ///
         }
       else // eager-get
         {
@@ -1247,17 +1258,7 @@ int kv_set (void *kv_handle, const char *key, const char *value)
         }
     }
   ctx->curr_buf = (ctx->curr_buf + 1) % MAX_HANDLE_REQUESTS;
-  ///
-  struct keyNode*curr = head;
-  while (curr != NULL) {
-      fprintf (stderr, curr->key);
-      fprintf (stderr, " - ");
-      fprintf (stderr, curr->value);
-      fprintf (stderr,  "\n");
-      fflush(stderr);
-      curr = curr->next;
-    }
-  ///
+
   return 0;
 }
 
