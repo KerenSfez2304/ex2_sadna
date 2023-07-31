@@ -50,28 +50,18 @@
 
 #include <stdbool.h>
 
-#define MAX_KEY_LENGTH  256
-#define MAX_VALUE_LENGTH 1024
 #define MAX_STATUS_LENGTH 10
-#define NUM_BUFFS 10 //todo: mmaybe change?
-#define NUM_RECV_BUFFS 5
-#define SIZE_BUFFER 4096
 #define MAX_EAGER_MSG_SIZE 4096
 #define MB 1048576L
 #define MAX_HANDLE_REQUESTS 4
 #define WC_BATCH (1)
 #define ITER_WARM_UP 6000
-#define SET_PREFIX_SIZE 2
 #define NUM_CLIENT 1
-#define GET 'g'
-#define SET 's'
-#define FIN 'f'
-#define EAGER 'e'
-#define RDV 'r'
 
 int argc_;
 char **argv_;
 struct keyNode *head = NULL;
+struct packetNode* waiting_queue = NULL;
 static int page_size;
 
 enum {
@@ -84,6 +74,12 @@ struct keyNode {
     char *value;
     bool writing;
     struct keyNode *next;
+};
+
+struct packetNode {
+    struct keyNode* node;
+    struct packet* packet_;
+    struct packetNode *next;
 };
 
 struct packet {
