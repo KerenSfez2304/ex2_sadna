@@ -1247,6 +1247,17 @@ int kv_set (void *kv_handle, const char *key, const char *value)
         }
     }
   ctx->curr_buf = (ctx->curr_buf + 1) % MAX_HANDLE_REQUESTS;
+  ///
+  struct keyNode*curr = head;
+  while (curr != NULL) {
+      fprintf (stderr, curr->key);
+      fprintf (stderr, " - ");
+      fprintf (stderr, curr->value);
+      fprintf (stderr,  "\n");
+      fflush(stderr);
+      curr = curr->next;
+    }
+  ///
   return 0;
 }
 
