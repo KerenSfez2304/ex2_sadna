@@ -1294,7 +1294,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
                                             | IBV_ACCESS_LOCAL_WRITE);
       ctx->mr[ctx->curr_buf] = (struct ibv_mr *) clientMR;
       ctx->size = vallen;
-      if (pp_post_send(ctx, IBV_WR_RDMA_READ, for_val, get_packet->remote_addr, get_packet->remote_key)) {
+      if (pp_post_send(ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key)) {
           fprintf(stderr, "Error sending the packet");
           return 1;
         }
