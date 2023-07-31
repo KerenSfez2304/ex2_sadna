@@ -1,10 +1,13 @@
-all: server client
+all: server client tests
 
 server: bw_template.c
 	gcc bw_template.c -libverbs -o server
+
+tests: tests.c
+	gcc tests.c -libverbs -o tests
 
 client: server
 	ln -sf server client
 
 clean:
-	rm -f server client
+	rm -f server client tests
