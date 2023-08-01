@@ -1304,6 +1304,21 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   return 0;
 }
 
+int eager_kv_set (void *kv_handle, const char *key, const char *value)
+{
+  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
+  ctx->size = sizeof (struct packet);
+  struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
+  pack->protocol_type = 'e';
+  pack->request_type = 's';
+  strncpy(pack->key, key, sizeof (pack->key));
+  strncpy(pack->value, value, sizeof (pack->value));
+  if (send_packet (ctx))
+    {
+      return 1;
+    }
+  return 0;
+}
 
 int kv_set (void *kv_handle, const char *key, const char *value)
 {
@@ -1317,11 +1332,12 @@ int kv_set (void *kv_handle, const char *key, const char *value)
 
   if (packet_size <= MAX_EAGER_MSG_SIZE)
     {
-      if (kv_eager_set (ctx, set_packet, packet_size, key, value, keylen, vallen))
-        {
-          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
-          return 1;
-        }
+      eager_kv_set (ctx, key, value);
+//      if (kv_eager_set (ctx, set_packet, packet_size, key, value, keylen, vallen))
+//        {
+//          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
+//          return 1;
+//        }
     }
   else
     {
