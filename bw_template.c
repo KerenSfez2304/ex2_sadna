@@ -1061,7 +1061,7 @@ int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
 int kv_get(void *kv_handle, const char *key, char **value) {
     struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
     struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
-  pack->protocol = 'e';
+  pack->protocol_type = 'e';
     pack->request_type = 'g';
     strncpy(pack->key, key, sizeof(pack->key));
   fprintf (stderr, "__ici_1_");
