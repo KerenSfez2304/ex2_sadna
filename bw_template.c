@@ -1332,7 +1332,14 @@ int server_handle_get_request(struct pingpong_context *ctx, struct packet *pack,
     struct packet *pack_response = (struct packet*)ctx->buf[buf_id];
     struct keyNode* curr = head;
     while (curr != NULL) {
-
+        fprintf(stderr, curr->key);
+        fflush(stderr);
+        fprintf(stderr, " - ");
+        fflush(stderr);
+        fprintf(stderr, pack->key);
+        fflush(stderr);
+        fprintf(stderr, "\n");
+        fflush(stderr);
         if(strcmp(curr->key, pack->key) == 0){
             size_t vallen = strlen (curr->value) + 1;
             if (vallen > MAX_EAGER_MSG_SIZE) {
