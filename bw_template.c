@@ -1311,7 +1311,7 @@ int server_handle_set_request(struct pingpong_context *ctx, struct packet *pack,
     }
 
     // The key is not in our database
-  fprintf(stderr, "DRAME");
+  fprintf(stderr, "DRAME\n");
   fflush(stderr);
     struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
     strcpy(new_head->key, pack->key);
