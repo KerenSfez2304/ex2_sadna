@@ -1079,6 +1079,8 @@ int kv_get(void *kv_handle, const char *key, char **value) {
     int response;
     if (response_pack->protocol_type == 'e') {
         // EAGER PROTOCOL
+        fprintf (stderr, "__ici_4_set_");
+        fflush (stderr);
         response = eager_kv_get(value, response_pack);
     }
     else {
