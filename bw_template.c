@@ -924,44 +924,6 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
     }
 }
 
-int
-server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
-                           size_t buf_id)
-{
-  struct packet *pack_response = (struct packet *) ctx->buf[buf_id];
-  struct keyNode *curr = head;
-  while (curr != NULL)
-    {
-      if (strcmp (curr->key, pack->key) == 0)
-        {
-          size_t vallen = strlen (curr->value) + 1;
-          if (vallen > MAX_EAGER_MSG_SIZE)
-            {
-              // RENDEZVOUS PROTOCOL
-              pack_response->protocol = 'r';
-              struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
-                                                     IBV_ACCESS_REMOTE_WRITE
-                                                     | IBV_ACCESS_LOCAL_WRITE
-                                                     | IBV_ACCESS_REMOTE_READ);
-              pack_response->remote_key = mr_create->rkey;
-              pack_response->remote_addr = mr_create->addr;
-              pack_response->value_lenght = vallen;
-              ctx->currBuffer = buf_id;
-              return send_packet (ctx);
-            }
-          // EAGER PROTOCOL
-          pack_response->protocol = 'e';
-          strncpy(pack_response->value, curr->value, sizeof (pack_response->value));
-          ctx->currBuffer = buf_id;
-          return send_packet (ctx);
-        }
-      curr = curr->next;
-    }
-  pack_response->protocol = 'e';
-  strncpy(pack_response->value, "", sizeof (pack_response->value));
-  ctx->currBuffer = buf_id;
-  return send_packet (ctx);
-}
 
 int server_handle_eager_get (
     struct pingpong_context *ctx,
@@ -1008,27 +970,82 @@ int server_handle_eager_get (
   return send_packet (ctx);
 }
 
-int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
+//int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
+//{
+//  switch (pack->request_type)
+//    {
+//      case 's':
+//        if (pack->protocol == 'e')
+//          {
+//            printf ("New Set Request:\n\tKEY: %s\n\tVALUE: %s\n", pack->key, pack->value);
+//          }
+//        else
+//          {
+//            printf ("New Set Request:\n\tKEY: %s\n", pack->key);
+//          }
+//      fflush (stdout);
+//      return server_handle_set_request (ctx, pack, buf_id);
+//      case 'g':
+//        printf ("New Get Request:\n\tKEY: %s\n", pack->key);
+//      fflush (stdout);
+//      return server_handle_eager_get (ctx, pack, buf_id);
+//    }
+//}
+
+void server_handle_request (struct pingpong_context *ctx, size_t int_buf)
 {
-  switch (pack->request_type)
+  struct packet *packet = ctx->buf[int_buf];
+
+//  if (packet->request_type == 'f')
+//    {
+//      set_status_non_writing (packet);
+//    }
+
+//  struct keyNode *currNode = get_status_writing (packet);
+//  if (currNode)
+//    { // the status of the key-value is on writing state
+//      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
+//      if (newQueue == NULL)
+//        {
+//          fprintf (stdout, "Fail allocating memory");
+//        }
+//      newQueue->ctx = ctx;
+//      newQueue->node = currNode;
+//      newQueue->next = waiting_queue;
+//      waiting_queue = newQueue;
+//      return;
+//    }
+  if (packet->protocol == 'e') //eager
     {
-      case 's':
-        if (pack->protocol == 'e')
-          {
-            printf ("New Set Request:\n\tKEY: %s\n\tVALUE: %s\n", pack->key, pack->value);
-          }
-        else
-          {
-            printf ("New Set Request:\n\tKEY: %s\n", pack->key);
-          }
-      fflush (stdout);
-      return server_handle_set_request (ctx, pack, buf_id);
-      case 'g':
-        printf ("New Get Request:\n\tKEY: %s\n", pack->key);
-      fflush (stdout);
-      return server_handle_eager_get (ctx, pack, buf_id);
+      fprintf(stderr, "eager\n");
+      fflush(stderr);
+      if (packet->request_type == 's') // eager-set
+        {
+          fprintf(stderr, "set\n");
+          fflush(stderr);
+          server_handle_eager_set (ctx, packet);
+        }
+      else // eager-get
+        {
+          fprintf(stderr, "get\n");
+          fflush(stderr);
+          server_handle_eager_get (ctx, packet, int_buf);
+        }
     }
+  else // rdv
+    {
+      fprintf(stderr, "rdv \n");
+      fflush(stderr);
+      if (packet->request_type == 's') //rdv-set
+        {
+          fprintf(stderr, "set\n");
+          fflush(stderr);
+          server_handle_rdv_set (ctx, packet);
+        }
+    }
+
 }
+
 
 
 ///////////////////////////// CLIENT ///////////////////////////////////
@@ -1488,8 +1505,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (ne >= 1)
             {
-              handle_request (clients_ctx[i],
-                              (struct packet *) clients_ctx[i]->buf[clients_ctx[i]->currBuffer],
+              server_handle_request (clients_ctx[i],
                               clients_ctx[i]->currBuffer);
 //              server_handle_request (clients_ctx[i], free_b[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
