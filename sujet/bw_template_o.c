@@ -941,6 +941,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value) {
     ctx->size = size_value;
     pp_post_send(ctx,
                  value,
+                 value,
                  pack_response->rendezvous_set.remote_addr,
                  pack_response->rendezvous_set.rkey,
                  IBV_WR_RDMA_WRITE);

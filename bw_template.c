@@ -82,7 +82,7 @@ struct packet {
 };
 
 struct keyNode {
-    char key[MAX_HANDLE_REQUESTS];
+    char key[MAX_EAGER_MSG_SIZE];
     char *value;
     bool writing;
     struct keyNode *next;
@@ -1373,7 +1373,7 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
   fprintf (stderr, "DRAME\n");
   fflush (stderr);
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
-  strcpy(new_head->key, pack->key);
+  strncpy(new_head->key, pack->key, sizeof(pack->key));
 
   if (pack->protocol_type == 'e')
     {
