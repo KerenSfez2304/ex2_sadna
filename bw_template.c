@@ -1031,6 +1031,8 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
     {
       return 1;
     }
+  fprintf (stderr, "client waits for mr from server\n");
+  fflush(stderr);
   ctx->size = sizeof (struct packet);
   if (receive_packet (ctx))
     {
@@ -1043,6 +1045,8 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
                                                     | IBV_ACCESS_LOCAL_WRITE);
   ctx->mr[ctx->currBuffer] = clientMR;
   ctx->size = size_value;
+  fprintf (stderr, "client rdma write\n");
+  fflush(stderr);
   pp_post_send (ctx,
                 value,
                 pack_response->remote_addr,
@@ -1054,6 +1058,8 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
       return 1;
     };
   ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
+  fprintf (stderr, "client sends fin\n");
+  fflush(stderr);
   // ---- FIN (ACK TO SERVER) -----
   ctx->size = 1;
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
@@ -1250,6 +1256,8 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
   pack->rkey = mr_create->rkey;
   pack->remote_addr = mr_create->addr;
   ctx->currBuffer = buf_id;
+  fprintf (stderr, "server sends mr to client\n");
+  fflush(stderr);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Client couldn't post send.\n");
@@ -1261,6 +1269,8 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
       fprintf (stderr, "Error during completion");
       return 1;
     }
+  fprintf (stderr, "server waits for fin\n");
+  fflush(stderr);
   // WAIT FOR FIN
   ctx->size = 1;
   if (pp_post_recv (ctx, 1) != 1)
@@ -1276,7 +1286,8 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
   // WAIT FOR FIN
   new_head->next = head;
   head = new_head;
-
+  fprintf (stderr, "server got fin\n");
+  fflush(stderr);
   return 0;
 }
 
@@ -1368,14 +1379,6 @@ int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clien
         {
           struct ibv_wc wc[WC_BATCH];
           int ne = ibv_poll_cq (ctx[curr_client]->cq, WC_BATCH, wc);
-
-          if (ne == 0)
-            {
-              fprintf (stderr, "\n__NOTHING TO POLL\n");
-              fflush(stderr);
-//              return 1;
-            }
-
 
           if (ne < 0)
             {
