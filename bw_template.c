@@ -654,8 +654,8 @@ int pp_wait_completions (struct pingpong_context *ctx, int iters)
 
       do
         {
-          fprintf (stderr, ".");
-          fflush(stderr);
+//          fprintf (stderr, ".");
+//          fflush(stderr);
           ne = ibv_poll_cq (ctx->cq, WC_BATCH, wc);
           if (ne < 0)
             {
