@@ -1263,7 +1263,8 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
       fprintf (stderr, "Client couldn't post send.\n");
       return 1;
     }
-
+  fprintf (stderr, "server waits for completion of mr\n");
+  fflush(stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
