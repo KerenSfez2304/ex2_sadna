@@ -1028,7 +1028,11 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   size_t size_value = strlen (value) + 1;
   pack->size = size_value;
   strcpy(pack->key, key);
+  fprintf (stderr, "\n");
+  fflush (stderr);
   fprintf (stderr, pack->key);
+  fflush (stderr);
+  fprintf (stderr, "\n");
   fflush (stderr);
   fprintf (stderr, "avant send\n");
   fflush (stderr);
