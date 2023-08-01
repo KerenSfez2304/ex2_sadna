@@ -867,7 +867,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   new_head->value = calloc (packet->value_lenght, 1);
   // todo: deal with the free
   packet->protocol = 'r';
-  struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, new_head->value, pecket->size,
+  mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->size,
                                          IBV_ACCESS_REMOTE_WRITE
                                          | IBV_ACCESS_LOCAL_WRITE);
   packet->request_type = 's';
