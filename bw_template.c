@@ -1053,7 +1053,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
                                                     | IBV_ACCESS_LOCAL_WRITE);
 
   ctx->mr[ctx->currBuffer] = clientMR;
-  ctx->size = size_value;
+//  ctx->size = size_value;
   pp_post_send (ctx,
                 value,
                 pack_response->remote_addr,
