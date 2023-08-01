@@ -762,38 +762,6 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
 ///////////////////////////// SERVER ///////////////////////////////////
 
 
-int send_packet (struct pingpong_context *ctx)
-{
-  ctx->size = sizeof (struct packet);
-  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
-    {
-      printf ("%d%s", 1, "Error server send");
-      return 1;
-    }
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    }
-  return 0;
-}
-
-int receive_packet (struct pingpong_context *ctx)
-{
-  ctx->size = sizeof (struct packet);
-  if (pp_post_recv (ctx, 1) != 1)
-    {
-      printf ("%d%s", 1, "Error server send");
-      return 1;
-    }
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    }
-  return 0;
-}
-
 int
 server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
 {
@@ -841,7 +809,17 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
           packet->request_type = 's';
           packet->remote_addr = mr_create->addr;
           packet->remote_key = mr_create->rkey;
-          send_packet (ctx);
+          ctx->size = sizeof (struct packet);
+          if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
+            {
+              fprintf (stderr, "Error sending packet");
+              return 1;
+            }
+          if (pp_wait_completions (ctx, 1))
+            {
+              fprintf (stderr, "Error waiting for completion");
+              return 1;
+            }
           // WAIT FOR FIN
           ctx->size = 1;
           if (pp_post_recv (ctx, 1) != 1)
@@ -941,14 +919,36 @@ int server_handle_eager_get (
               packet->remote_key = mr_create->rkey;
               packet->value_lenght = vallen;
               key_exist = true;
-              return send_packet (ctx);
+              ctx->size = sizeof (struct packet);
+              if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
+                {
+                  fprintf (stderr, "Error sending packet");
+                  return 1;
+                }
+              if (pp_wait_completions (ctx, 1))
+                {
+                  fprintf (stderr, "Error waiting for completion");
+                  return 1;
+                }
+              return 0;
             }
           else
             { //eager
               packet->protocol = 'e';
               strncpy(packet->value, curr->value, sizeof (packet->value));
               key_exist = true;
-              return send_packet (ctx);
+              ctx->size = sizeof (struct packet);
+              if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
+                {
+                  fprintf (stderr, "Error sending packet");
+                  return 1;
+                }
+              if (pp_wait_completions (ctx, 1))
+                {
+                  fprintf (stderr, "Error waiting for completion");
+                  return 1;
+                }
+              return 0;
             }
         }
       curr = curr->next;
@@ -956,7 +956,18 @@ int server_handle_eager_get (
 
   packet->protocol = 'e';
   strcpy(packet->value, "");
-  return send_packet (ctx);
+  ctx->size = sizeof (struct packet);
+  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
+    {
+      fprintf (stderr, "Error sending packet");
+      return 1;
+    }
+  if (pp_wait_completions (ctx, 1))
+    {
+      fprintf (stderr, "Error waiting for completion");
+      return 1;
+    }
+  return 0;
 }
 
 void server_handle_request (struct pingpong_context *ctx)
@@ -1224,8 +1235,15 @@ int kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t pa
   strncpy(packet->key, key, sizeof (packet->key));
   strncpy(packet->value, value, sizeof (packet->value));
 
-  if (send_packet (ctx))
+  ctx->size = sizeof (struct packet);
+  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
+      fprintf (stderr, "Error sending packet");
+      return 1;
+    }
+  if (pp_wait_completions (ctx, 1))
+    {
+      fprintf (stderr, "Error waiting for completion");
       return 1;
     }
   return 0;
@@ -1238,12 +1256,26 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   packet->value_lenght = vallen + 1;
   strcpy(packet->key, key);
 
-  if (send_packet (ctx))
+  ctx->size = sizeof (struct packet);
+  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
+      fprintf (stderr, "Error sending packet");
       return 1;
     }
-  if (receive_packet (ctx))
+  if (pp_wait_completions (ctx, 1))
     {
+      fprintf (stderr, "Error waiting for completion");
+      return 1;
+    }
+  ctx->size = sizeof (struct packet);
+  if (pp_post_recv (ctx, 1) != 1)
+    {
+      fprintf (stderr, "Error receiving packet");
+      return 1;
+    }
+  if (pp_wait_completions (ctx, 1))
+    {
+      fprintf (stderr, "Error waiting for completion");
       return 1;
     }
 
@@ -1405,15 +1437,15 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-      while (curr != NULL)
-        {
-          if (!curr->node->writing)
-            {
-              server_handle_request (curr->ctx);
-              break;
-            }
-          curr = curr->next;
-        }
+//      while (curr != NULL)
+//        {
+//          if (!curr->node->writing)
+//            {
+//              server_handle_request (curr->ctx);
+//              break;
+//            }
+//          curr = curr->next;
+//        }
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
