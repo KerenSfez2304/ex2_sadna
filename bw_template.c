@@ -1179,7 +1179,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ctx->size = vallen;
       fprintf (stderr, "__ici_7_");
       fflush (stderr);
-      if (pp_post_send (ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key))
+      if (pp_post_send (ctx, *value, get_packet->remote_addr, get_packet->rkey, IBV_WR_RDMA_READ))
         {
           fprintf (stderr, "Error sending the packet");
           return 1;
