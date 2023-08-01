@@ -906,8 +906,6 @@ struct keyNode *get_status_writing (struct packet *packet)
 
 void server_handle_request (struct pingpong_context *ctx, size_t int_buf)
 {
-    fprintf(stderr, "REQUEST");
-    fflush(stderr);
     struct packet *packet = ctx->buf[int_buf];
 
 //  if (packet->request_type == 'f')
@@ -958,19 +956,6 @@ void server_handle_request (struct pingpong_context *ctx, size_t int_buf)
         }
     }
 
-//  /// todo: delete this
-
-    struct keyNode *curr = head;
-    while (curr != NULL)
-    {
-        fprintf (stderr, curr->key);
-        fprintf (stderr, " - ");
-        fprintf (stderr, curr->value);
-        fprintf (stderr, "\n");
-        fflush (stderr);
-        curr = curr->next;
-    }
-    ///
 }
 
 ///////////////////////////// CLIENT ///////////////////////////////////

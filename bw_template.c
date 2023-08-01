@@ -763,223 +763,223 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
 ///////////////////////////// SERVER ///////////////////////////////////
 
 
-int connect_main (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
-{
-  struct ibv_device **dev_list;
-  struct ibv_device *ib_dev;
-  struct pingpong_context *ctx;
-  struct pingpong_dest my_dest;
-  struct pingpong_dest *rem_dest;
-  char *ib_devname = NULL;
-  int port = 4792;
-  int ib_port = 1;
-  enum ibv_mtu mtu = IBV_MTU_2048;
-  int rx_depth = 5000;
-  int tx_depth = 5000;
-  int iters = 50000;
-  int use_event = 0;
-  int size = MB;
-  int sl = 0;
-  int gidx = -1;
-  char gid[33];
-
-  srand48 (getpid () * time (NULL));
-
-  while (1)
-    {
-      int c;
-
-      static struct option long_options[] = {
-          {.name = "port", .has_arg = 1, .val = 'p'},
-          {.name = "ib-dev", .has_arg = 1, .val = 'd'},
-          {.name = "ib-port", .has_arg = 1, .val = 'i'},
-          {.name = "size", .has_arg = 1, .val = 's'},
-          {.name = "mtu", .has_arg = 1, .val = 'm'},
-          {.name = "rx-depth", .has_arg = 1, .val = 'r'},
-          {.name = "iters", .has_arg = 1, .val = 'n'},
-          {.name = "sl", .has_arg = 1, .val = 'l'},
-          {.name = "events", .has_arg = 0, .val = 'e'},
-          {.name = "gid-idx", .has_arg = 1, .val = 'g'},
-          {0}
-      };
-
-      c = getopt_long (argc, argv, "p:d:i:s:m:r:n:l:eg:", long_options, NULL);
-      if (c == -1)
-        break;
-
-      switch (c)
-        {
-          case 'p':
-            port = strtol (optarg, NULL, 0);
-          if (port < 0 || port > 65535)
-            {
-              usage (argv[0]);
-              return 1;
-            }
-          break;
-
-          case 'd':
-            ib_devname = strdup (optarg);
-          break;
-
-          case 'i':
-            ib_port = strtol (optarg, NULL, 0);
-          if (ib_port < 0)
-            {
-              usage (argv[0]);
-              return 1;
-            }
-          break;
-
-          case 's':
-            size = strtol (optarg, NULL, 0);
-          break;
-
-          case 'm':
-            mtu = pp_mtu_to_enum (strtol (optarg, NULL, 0));
-          if (mtu < 0)
-            {
-              usage (argv[0]);
-              return 1;
-            }
-          break;
-
-          case 'r':
-            rx_depth = strtol (optarg, NULL, 0);
-          break;
-
-          case 'n':
-            iters = strtol (optarg, NULL, 0);
-          break;
-
-          case 'l':
-            sl = strtol (optarg, NULL, 0);
-          break;
-
-          case 'e':
-            ++use_event;
-          break;
-
-          case 'g':
-            gidx = strtol (optarg, NULL, 0);
-          break;
-
-          default:
-            usage (argv[0]);
-          return 1;
-        }
-    }
-
-//    if (optind == argc - 1)
-//        servername = strdup(argv[optind]);
-//    else if (optind < argc) {
-//        usage(argv[0]);
-//        return 1;
+//int connect_main (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
+//{
+//  struct ibv_device **dev_list;
+//  struct ibv_device *ib_dev;
+//  struct pingpong_context *ctx;
+//  struct pingpong_dest my_dest;
+//  struct pingpong_dest *rem_dest;
+//  char *ib_devname = NULL;
+//  int port = 4792;
+//  int ib_port = 1;
+//  enum ibv_mtu mtu = IBV_MTU_2048;
+//  int rx_depth = 5000;
+//  int tx_depth = 5000;
+//  int iters = 50000;
+//  int use_event = 0;
+//  int size = MB;
+//  int sl = 0;
+//  int gidx = -1;
+//  char gid[33];
+//
+//  srand48 (getpid () * time (NULL));
+//
+//  while (1)
+//    {
+//      int c;
+//
+//      static struct option long_options[] = {
+//          {.name = "port", .has_arg = 1, .val = 'p'},
+//          {.name = "ib-dev", .has_arg = 1, .val = 'd'},
+//          {.name = "ib-port", .has_arg = 1, .val = 'i'},
+//          {.name = "size", .has_arg = 1, .val = 's'},
+//          {.name = "mtu", .has_arg = 1, .val = 'm'},
+//          {.name = "rx-depth", .has_arg = 1, .val = 'r'},
+//          {.name = "iters", .has_arg = 1, .val = 'n'},
+//          {.name = "sl", .has_arg = 1, .val = 'l'},
+//          {.name = "events", .has_arg = 0, .val = 'e'},
+//          {.name = "gid-idx", .has_arg = 1, .val = 'g'},
+//          {0}
+//      };
+//
+//      c = getopt_long (argc, argv, "p:d:i:s:m:r:n:l:eg:", long_options, NULL);
+//      if (c == -1)
+//        break;
+//
+//      switch (c)
+//        {
+//          case 'p':
+//            port = strtol (optarg, NULL, 0);
+//          if (port < 0 || port > 65535)
+//            {
+//              usage (argv[0]);
+//              return 1;
+//            }
+//          break;
+//
+//          case 'd':
+//            ib_devname = strdup (optarg);
+//          break;
+//
+//          case 'i':
+//            ib_port = strtol (optarg, NULL, 0);
+//          if (ib_port < 0)
+//            {
+//              usage (argv[0]);
+//              return 1;
+//            }
+//          break;
+//
+//          case 's':
+//            size = strtol (optarg, NULL, 0);
+//          break;
+//
+//          case 'm':
+//            mtu = pp_mtu_to_enum (strtol (optarg, NULL, 0));
+//          if (mtu < 0)
+//            {
+//              usage (argv[0]);
+//              return 1;
+//            }
+//          break;
+//
+//          case 'r':
+//            rx_depth = strtol (optarg, NULL, 0);
+//          break;
+//
+//          case 'n':
+//            iters = strtol (optarg, NULL, 0);
+//          break;
+//
+//          case 'l':
+//            sl = strtol (optarg, NULL, 0);
+//          break;
+//
+//          case 'e':
+//            ++use_event;
+//          break;
+//
+//          case 'g':
+//            gidx = strtol (optarg, NULL, 0);
+//          break;
+//
+//          default:
+//            usage (argv[0]);
+//          return 1;
+//        }
 //    }
-
-  page_size = sysconf (_SC_PAGESIZE);
-
-  dev_list = ibv_get_device_list (NULL);
-  if (!dev_list)
-    {
-      perror ("Failed to get IB devices list");
-      return 1;
-    }
-
-  if (!ib_devname)
-    {
-      ib_dev = *dev_list;
-      if (!ib_dev)
-        {
-          fprintf (stderr, "No IB devices found\n");
-          return 1;
-        }
-    }
-  else
-    {
-      int i;
-      for (i = 0; dev_list[i]; ++i)
-        if (!strcmp (ibv_get_device_name (dev_list[i]), ib_devname))
-          break;
-      ib_dev = dev_list[i];
-      if (!ib_dev)
-        {
-          fprintf (stderr, "IB device %s not found\n", ib_devname);
-          return 1;
-        }
-    }
-
-  ctx = pp_init_ctx (ib_dev, size, rx_depth, tx_depth, ib_port, use_event, !servername);
-
-  if (!ctx) return 1;
-
-//    ctx->currBuffer = 0;
-//    ctx->routs = pp_post_recv(ctx, ctx->rx_depth);
-//    if (ctx->routs < ctx->rx_depth) {
-//        fprintf(stderr, "Couldn't post receive (%d)\n", ctx->routs);
-//        return 1;
+//
+////    if (optind == argc - 1)
+////        servername = strdup(argv[optind]);
+////    else if (optind < argc) {
+////        usage(argv[0]);
+////        return 1;
+////    }
+//
+//  page_size = sysconf (_SC_PAGESIZE);
+//
+//  dev_list = ibv_get_device_list (NULL);
+//  if (!dev_list)
+//    {
+//      perror ("Failed to get IB devices list");
+//      return 1;
 //    }
-
-  if (use_event)
-    if (ibv_req_notify_cq (ctx->cq, 0))
-      {
-        fprintf (stderr, "Couldn't request CQ notification\n");
-        return 1;
-      }
-
-  if (pp_get_port_info (ctx->context, ib_port, &ctx->portinfo))
-    {
-      fprintf (stderr, "Couldn't get port info\n");
-      return 1;
-    }
-
-  my_dest.lid = ctx->portinfo.lid;
-  if (ctx->portinfo.link_layer == IBV_LINK_LAYER_INFINIBAND && !my_dest.lid)
-    {
-      fprintf (stderr, "Couldn't get local LID\n");
-      return 1;
-    }
-
-  if (gidx >= 0)
-    {
-      if (ibv_query_gid (ctx->context, ib_port, gidx, &my_dest.gid))
-        {
-          fprintf (stderr, "Could not get local gid for gid index %d\n", gidx);
-          return 1;
-        }
-    }
-  else
-    memset(&my_dest.gid, 0, sizeof my_dest.gid);
-
-  my_dest.qpn = ctx->qp->qp_num;
-  my_dest.psn = lrand48 () & 0xffffff;
-  inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
-//    printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-//           my_dest.lid, my_dest.qpn, my_dest.psn, gid);
-
-
-  if (servername)
-    {
-      rem_dest = pp_client_exch_dest (servername, port, &my_dest);
-    }
-  else
-    rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
-
-  if (!rem_dest)
-    return 1;
-
-  inet_ntop (AF_INET6, &rem_dest->gid, gid, sizeof gid);
-//    printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-//           rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid);
-
-  if (servername)
-    if (pp_connect_ctx (ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
-      return 1;
-  *save_ctx = ctx;
-  ibv_free_device_list (dev_list);
-  free (rem_dest);
-  return 0;
-}
+//
+//  if (!ib_devname)
+//    {
+//      ib_dev = *dev_list;
+//      if (!ib_dev)
+//        {
+//          fprintf (stderr, "No IB devices found\n");
+//          return 1;
+//        }
+//    }
+//  else
+//    {
+//      int i;
+//      for (i = 0; dev_list[i]; ++i)
+//        if (!strcmp (ibv_get_device_name (dev_list[i]), ib_devname))
+//          break;
+//      ib_dev = dev_list[i];
+//      if (!ib_dev)
+//        {
+//          fprintf (stderr, "IB device %s not found\n", ib_devname);
+//          return 1;
+//        }
+//    }
+//
+//  ctx = pp_init_ctx (ib_dev, size, rx_depth, tx_depth, ib_port, use_event, !servername);
+//
+//  if (!ctx) return 1;
+//
+////    ctx->currBuffer = 0;
+////    ctx->routs = pp_post_recv(ctx, ctx->rx_depth);
+////    if (ctx->routs < ctx->rx_depth) {
+////        fprintf(stderr, "Couldn't post receive (%d)\n", ctx->routs);
+////        return 1;
+////    }
+//
+//  if (use_event)
+//    if (ibv_req_notify_cq (ctx->cq, 0))
+//      {
+//        fprintf (stderr, "Couldn't request CQ notification\n");
+//        return 1;
+//      }
+//
+//  if (pp_get_port_info (ctx->context, ib_port, &ctx->portinfo))
+//    {
+//      fprintf (stderr, "Couldn't get port info\n");
+//      return 1;
+//    }
+//
+//  my_dest.lid = ctx->portinfo.lid;
+//  if (ctx->portinfo.link_layer == IBV_LINK_LAYER_INFINIBAND && !my_dest.lid)
+//    {
+//      fprintf (stderr, "Couldn't get local LID\n");
+//      return 1;
+//    }
+//
+//  if (gidx >= 0)
+//    {
+//      if (ibv_query_gid (ctx->context, ib_port, gidx, &my_dest.gid))
+//        {
+//          fprintf (stderr, "Could not get local gid for gid index %d\n", gidx);
+//          return 1;
+//        }
+//    }
+//  else
+//    memset(&my_dest.gid, 0, sizeof my_dest.gid);
+//
+//  my_dest.qpn = ctx->qp->qp_num;
+//  my_dest.psn = lrand48 () & 0xffffff;
+//  inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
+////    printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
+////           my_dest.lid, my_dest.qpn, my_dest.psn, gid);
+//
+//
+//  if (servername)
+//    {
+//      rem_dest = pp_client_exch_dest (servername, port, &my_dest);
+//    }
+//  else
+//    rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+//
+//  if (!rem_dest)
+//    return 1;
+//
+//  inet_ntop (AF_INET6, &rem_dest->gid, gid, sizeof gid);
+////    printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
+////           rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid);
+//
+//  if (servername)
+//    if (pp_connect_ctx (ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
+//      return 1;
+//  *save_ctx = ctx;
+//  ibv_free_device_list (dev_list);
+//  free (rem_dest);
+//  return 0;
+//}
 
 int send_packet (struct pingpong_context *ctx)
 {
@@ -1232,12 +1232,229 @@ int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clien
 
 ///////////////////////////// CLIENT ///////////////////////////////////
 
+int
+helper_open (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
+{
+  struct ibv_device **dev_list;
+  struct ibv_device *ib_dev;
+  struct pingpong_context *ctx;
+  struct pingpong_dest my_dest;
+  struct pingpong_dest *rem_dest;
+  char *ib_devname = NULL;
+  int port = 4792;
+  int ib_port = 1;
+  enum ibv_mtu mtu = IBV_MTU_2048;
+  int rx_depth = 6000;
+  int tx_depth = 6000;
+  int iters = 60000;
+  int use_event = 0;
+  int size = 1048576L;
+  int sl = 0;
+  int gidx = -1;
+  char gid[33];
+
+  srand48 (getpid () * time (NULL));
+
+  while (1)
+    {
+      int c;
+
+      static struct option long_options[] = {
+          {.name = "port", .has_arg = 1, .val = 'p'},
+          {.name = "ib-dev", .has_arg = 1, .val = 'd'},
+          {.name = "ib-port", .has_arg = 1, .val = 'i'},
+          {.name = "size", .has_arg = 1, .val = 's'},
+          {.name = "mtu", .has_arg = 1, .val = 'm'},
+          {.name = "rx-depth", .has_arg = 1, .val = 'r'},
+          {.name = "iters", .has_arg = 1, .val = 'n'},
+          {.name = "sl", .has_arg = 1, .val = 'l'},
+          {.name = "events", .has_arg = 0, .val = 'e'},
+          {.name = "gid-idx", .has_arg = 1, .val = 'g'},
+          {0}
+      };
+
+      c = getopt_long (argc, argv, "p:d:i:s:m:r:n:l:eg:", long_options, NULL);
+      if (c == -1)
+        break;
+
+      switch (c)
+        {
+          case 'p':
+            port = strtol (optarg, NULL, 0);
+          if (port < 0 || port > 65535)
+            {
+              usage (argv[0]);
+              return 1;
+            }
+          break;
+
+          case 'd':
+            ib_devname = strdup (optarg);
+          break;
+
+          case 'i':
+            ib_port = strtol (optarg, NULL, 0);
+          if (ib_port < 0)
+            {
+              usage (argv[0]);
+              return 1;
+            }
+          break;
+
+          case 's':
+            size = strtol (optarg, NULL, 0);
+          break;
+
+          case 'm':
+            mtu = pp_mtu_to_enum (strtol (optarg, NULL, 0));
+          if (mtu < 0)
+            {
+              usage (argv[0]);
+              return 1;
+            }
+          break;
+
+          case 'r':
+            rx_depth = strtol (optarg, NULL, 0);
+          break;
+
+          case 'n':
+            iters = strtol (optarg, NULL, 0);
+          break;
+
+          case 'l':
+            sl = strtol (optarg, NULL, 0);
+          break;
+
+          case 'e':
+            ++use_event;
+          break;
+
+          case 'g':
+            gidx = strtol (optarg, NULL, 0);
+          break;
+
+          default:
+            usage (argv[0]);
+          return 1;
+        }
+    }
+
+  page_size = sysconf (_SC_PAGESIZE);
+
+  dev_list = ibv_get_device_list (NULL);
+  if (!dev_list)
+    {
+      perror ("Failed to get IB devices list");
+      return 1;
+    }
+
+  if (!ib_devname)
+    {
+      ib_dev = *dev_list;
+      if (!ib_dev)
+        {
+          fprintf (stderr, "No IB devices found\n");
+          return 1;
+        }
+    }
+  else
+    {
+      int i;
+      for (i = 0; dev_list[i]; ++i)
+        if (!strcmp (ibv_get_device_name (dev_list[i]), ib_devname))
+          break;
+      ib_dev = dev_list[i];
+      if (!ib_dev)
+        {
+          fprintf (stderr, "IB device %s not found\n", ib_devname);
+          return 1;
+        }
+    }
+
+  ctx = pp_init_ctx (ib_dev, size, rx_depth, tx_depth, ib_port, use_event, !servername);
+
+  if (!ctx) return 1;
+
+  if (use_event)
+    if (ibv_req_notify_cq (ctx->cq, 0))
+      {
+        fprintf (stderr, "Couldn't request CQ notification\n");
+        return 1;
+      }
+
+  if (pp_get_port_info (ctx->context, ib_port, &ctx->portinfo))
+    {
+      fprintf (stderr, "Couldn't get port info\n");
+      return 1;
+    }
+
+  my_dest.lid = ctx->portinfo.lid;
+  if (ctx->portinfo.link_layer == IBV_LINK_LAYER_INFINIBAND && !my_dest.lid)
+    {
+      fprintf (stderr, "Couldn't get local LID\n");
+      return 1;
+    }
+
+  if (gidx >= 0)
+    {
+      if (ibv_query_gid (ctx->context, ib_port, gidx, &my_dest.gid))
+        {
+          fprintf (stderr, "Could not get local gid for gid index %d\n", gidx);
+          return 1;
+        }
+    }
+  else
+    memset(&my_dest.gid, 0, sizeof my_dest.gid);
+
+  my_dest.qpn = ctx->qp->qp_num;
+  my_dest.psn = lrand48 () & 0xffffff;
+  inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
+  if (servername)
+    {
+      fprintf (stdout, "_____");
+      fflush (stdout);
+      fprintf (stdout, servername);
+      fflush (stdout);
+      fprintf (stdout, "_____");
+      fflush (stdout);
+    }
+  if (servername)
+    {
+      fprintf (stdout, "client");
+      fflush (stdout);
+      rem_dest = pp_client_exch_dest (servername, port, &my_dest);
+    }
+  else
+    {
+      fprintf (stdout, "server");
+      fflush (stdout);
+      rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
+    }
+
+  if (!rem_dest)
+    {
+      fprintf (stdout, "errror??");
+      fflush (stdout);
+      return 1;
+    }
+
+  inet_ntop (AF_INET6, &rem_dest->gid, gid, sizeof gid);
+
+  if (servername)
+    if (pp_connect_ctx (ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
+      {
+        return 1;
+      }
+  *save_ctx = ctx;
+  ibv_free_device_list (dev_list);
+  free (rem_dest);
+  return 0;
+}
+
 int kv_open (char *servername, void **kv_handle)
 {
-  return connect_main (servername,
-                       argc_global,
-                       argv_global,
-                       (struct pingpong_context **) kv_handle);
+  return helper_open (servername, argc_, argv_, (struct pingpong_context **) kv_handle);
 }
 
 int eager_kv_set (void *kv_handle, const char *key, const char *value)
@@ -1421,57 +1638,15 @@ int kv_close (void *kv_handle)
   return pp_close_ctx (kv_handle);
 }
 
+
 ///////////////////////////// RUN ///////////////////////////////////
 
-
-void run_tests (void *kv_handle)
-{
-  // wait for two clients to connect to the server
-  sleep (5);
-  // EAGER PROTOCOL TEST
-  char *value;
-  char *KEY_1 = "First_key";
-  char *VALUE_1 = "First value";
-  char *KEY_2 = "Second_key";
-  char *VALUE_2 = "Second value";
-  char *SOME_KEY = "Some key";
-  char *NULL_VALUE = "";
-  kv_set (kv_handle, KEY_1, VALUE_1);
-  kv_get (kv_handle, KEY_1, &value);
-  assert(strcmp (VALUE_1, value) == 0);
-  kv_set (kv_handle, KEY_2, VALUE_2);
-  kv_get (kv_handle, KEY_1, &value);
-  assert(strcmp (VALUE_1, value) == 0);
-  kv_get (kv_handle, KEY_2, &value);
-  assert(strcmp (VALUE_2, value) == 0);
-  kv_get (kv_handle, SOME_KEY, &value);
-  printf ("%s\n", value);
-  assert(strcmp (NULL_VALUE, value) == 0);
-  kv_get (kv_handle, SOME_KEY, &value);
-  assert(strcmp (NULL_VALUE, value) == 0);
-  // RENDEZVOUS PROTOCOL TEST
-  char *long_key = "rendezvous_key";
-  char *long_value = malloc (32000 * 2);
-  for (int i = 0; i < 32000 * 2; i++)
-    {
-      long_value[i] = 'a';
-    }
-  kv_set (kv_handle, long_key, long_value);
-  kv_get (kv_handle, long_key, &value);
-  assert(strcmp (long_value, value) == 0);
-  free (long_value);
-  printf ("%s", "ALL TESTS PASSED!\n");
-  fflush (stdout);
-  kv_release (value);
-  kv_close (kv_handle);
-}
 
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
 //  waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
 //  waiting_queue = NULL;
-//  int free_b[NUM_CLIENT] = {0};
   for (int i = 0; i < NUM_CLIENT; i++)
     {
       // todo (not really a todo): first free buffer for each client (each client has MAX_HANDLE_BUF(5) buffers
@@ -1516,8 +1691,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                               (struct packet *) clients_ctx[i]->buf[clients_ctx[i]->currBuffer],
                               clients_ctx[i]->currBuffer);
 //              server_handle_request (clients_ctx[i], free_b[i]);
-              // todo (not really a todo): update the current buffer of the
-              // client to be the next buffer
+              // todo (not really a todo): update the current buffer of the client to be the next buffer
               clients_ctx[i]->currBuffer = (clients_ctx[i]->currBuffer + 1)  % MAX_HANDLE_REQUESTS;
               clients_ctx[i]->size = sizeof(struct packet);
               if (pp_post_recv (clients_ctx[i], 1) != 1)
