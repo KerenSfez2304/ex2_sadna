@@ -1330,8 +1330,7 @@ int receive_packet_async (struct pingpong_context *ctx)
   return 0;
 }
 
-int
-handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
+int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
 {
   switch (pack->request_type)
     {
@@ -1369,6 +1368,15 @@ int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clien
         {
           struct ibv_wc wc[WC_BATCH];
           int ne = ibv_poll_cq (ctx[curr_client]->cq, WC_BATCH, wc);
+
+          if (ne == 0)
+            {
+              fprintf (stderr, "\n__NOTHING TO POLL\n");
+              fflush(stderr);
+              return 1;
+            }
+
+
           if (ne < 0)
             {
               fprintf (stderr, "poll CQ failed %d\n", ne);
