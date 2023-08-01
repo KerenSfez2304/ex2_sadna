@@ -1411,6 +1411,7 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
               printf ("%s", "Error completions");
               return 1;
             }
+          return 0;
         }
       curr = curr->next;
     }
