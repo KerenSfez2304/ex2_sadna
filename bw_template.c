@@ -1473,6 +1473,74 @@ int get_servername (char **servername, int argc, char **argv)
   return 0;
 }
 
+void test_performance (void *kv_handle)
+{
+  long double real_iters = 100;
+  long double warmp_up_iters = 50;
+  char key[12];
+  printf ("\n%s\n\n", "+++++++++++++++ SET THROUGHPUT MEASURE +++++++++++++++");
+  printf ("%s\n", "------- Eager Protocol -------");
+  for (long int message_size = 1; message_size <= MB; message_size *= 2)
+    {
+      if (message_size == MAX_EAGER_MSG_SIZE)
+        {
+          printf ("%s\n", "------- Rendezvous Protocol -------");
+        }
+      snprintf(key, sizeof (key), "%ld", message_size);
+      char *largeValue = calloc (message_size, sizeof (char));
+      memset(largeValue, 'a', message_size - 1);
+      clock_t start_time;
+      for (int i = 0; i < real_iters + warmp_up_iters; i++)
+        {
+          if (i == warmp_up_iters)
+            {
+              start_time = clock ();
+            }
+          kv_set (kv_handle, key, largeValue);
+        }
+      clock_t end_time = clock ();
+      long double diff_time =
+          (long double) (end_time - start_time) / CLOCKS_PER_SEC;
+      long double gb_unit = real_iters * message_size / pow (1024, 3);
+      long double throughput = gb_unit / diff_time;
+      printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
+    }
+  printf ("\n%s\n\n", "+++++++++++++++ GET THROUGHPUT MEASURE +++++++++++++++");
+  printf ("%s\n", "------- Eager Protocol -------");
+  for (long int message_size = 1; message_size <= MB; message_size *= 2)
+    {
+      if (message_size == MAX_EAGER_MSG_SIZE)
+        {
+          printf ("%s\n", "------- Rendezvous Protocol -------");
+        }
+      snprintf(key, sizeof (key), "%ld", message_size);
+      char *largeValue = calloc (message_size, sizeof (char));
+      memset(largeValue, 'a', message_size - 1);
+      char *retrievedValue = NULL;
+      clock_t start_time;
+      for (int i = 0; i < real_iters + warmp_up_iters; i++)
+        {
+          if (i == warmp_up_iters)
+            {
+              start_time = clock ();
+            };
+          kv_get (kv_handle, key, &retrievedValue);
+          if (!compareStrings (retrievedValue, largeValue))
+            {
+              printf (RED "THROUGHPUT: GET request for large value failed.\n" RESET);
+              exit (1);
+            }
+        }
+      free (largeValue);
+      clock_t end_time = clock ();
+      long double diff_time =
+          (long double) (end_time - start_time) / CLOCKS_PER_SEC;
+      long double gb_unit = real_iters * message_size / pow (1024, 3);
+      long double throughput = gb_unit / diff_time;
+      printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
+    }
+}
+
 int main (int argc, char *argv[])
 {
   char *servername = NULL;
