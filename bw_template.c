@@ -1052,12 +1052,18 @@ int kv_get(void *kv_handle, const char *key, char **value) {
     struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
     pack->request_type = 'g';
     strncpy(pack->key, key, sizeof(pack->key));
+  fprintf (stderr, "__ici_1_");
+  fflush (stderr);
     if (send_packet(ctx)) {
         return 1;
     }
+  fprintf (stderr, "__ici_2_");
+  fflush (stderr);
     if(receive_packet(ctx)) {
         return 1;
     }
+  fprintf (stderr, "__ici_3_");
+  fflush (stderr);
     struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
     int response;
     if (response_pack->protocol_type == 'e') {
