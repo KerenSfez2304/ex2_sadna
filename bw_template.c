@@ -1023,12 +1023,19 @@ int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
     struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
     *value = malloc( pack->size);
     struct ibv_mr *temp_mr = ctx->mr[ctx->currBuffer];
+  fprintf (stderr, "__ici_5_");
+  fflush (stderr);
     struct ibv_mr *curr_client_mr = ibv_reg_mr(ctx->pd,
                                                *value,
                                                pack->size,
                                                IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
+  fprintf (stderr, "__ici_6_");
+  fflush (stderr);
     ctx->mr[ctx->currBuffer] = curr_client_mr;
     ctx->size = pack->size;
+  fprintf (stderr, "__ici_7_");
+  fflush (stderr);
+
     if (pp_post_send(ctx,
                      *value,
                      pack->remote_addr,
@@ -1037,12 +1044,16 @@ int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
         printf("%d%s", 1, "Error server send");
         return 1;
     }
+  fprintf (stderr, "__ici_8_");
+  fflush (stderr);
     if(pp_wait_completions(ctx, 1)) {
         printf("%s", "Error completions");
         return 1;
     }
     ctx->mr[ctx->currBuffer] = temp_mr;
     ibv_dereg_mr(curr_client_mr);
+  fprintf (stderr, "__ici_9_");
+  fflush (stderr);
     return 0;
 }
 
@@ -1072,6 +1083,8 @@ int kv_get(void *kv_handle, const char *key, char **value) {
     }
     else {
         // RENDEZVOUS PROTOCOL
+        fprintf (stderr, "__ici_4_rdv_");
+        fflush (stderr);
         response = rendezvous_kv_get(kv_handle, key, value);
     }
     ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;

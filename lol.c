@@ -1354,21 +1354,30 @@ int kv_get (void *kv_handle, const char *key, char **value)
     }
     else
     { //rdv
+        fprintf (stderr, "__ici_4_rdv_");
+        fflush (stderr);
         size_t vallen = get_packet->value_length;
 //      *for_val = calloc (vallen, 1);
         *value = malloc (vallen);
         struct ibv_mr *ctxMR = ctx->mr[ctx->curr_buf];
+        fprintf (stderr, "__ici_5_");
+        fflush (stderr);
         struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) *value, vallen,
                                               IBV_ACCESS_REMOTE_WRITE
                                               | IBV_ACCESS_LOCAL_WRITE);
+        fprintf (stderr, "__ici_6_");
+        fflush (stderr);
         ctx->mr[ctx->curr_buf] = (struct ibv_mr *) clientMR;
         ctx->size = vallen;
+        fprintf (stderr, "__ici_7_");
+        fflush (stderr);
         if (pp_post_send (ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key))
         {
             fprintf (stderr, "Error sending the packet");
             return 1;
         }
-
+        fprintf (stderr, "__ici_3_");
+        fflush (stderr);
         if (pp_wait_completions (ctx, 1) != 0)
         {
             fprintf (stderr, "Error during completion");
