@@ -763,7 +763,7 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
 ///////////////////////////// SERVER ///////////////////////////////////
 
 
-intconnect_main (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
+int connect_main (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
 {
   struct ibv_device **dev_list;
   struct ibv_device *ib_dev;
