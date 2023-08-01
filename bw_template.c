@@ -868,8 +868,8 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   // todo: deal with the free
   packet->protocol = 'r';
   mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
-                                         IBV_ACCESS_REMOTE_WRITE
-                                         | IBV_ACCESS_LOCAL_WRITE);
+                          IBV_ACCESS_REMOTE_WRITE
+                          | IBV_ACCESS_LOCAL_WRITE);
   packet->request_type = 's';
   packet->remote_key = mr_create->rkey;
   packet->remote_addr = mr_create->addr;
@@ -963,19 +963,52 @@ server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
   return send_packet (ctx);
 }
 
-int receive_packet_async (struct pingpong_context *ctx)
+int server_handle_eager_get (
+    struct pingpong_context *ctx,
+    struct packet *packet,
+    size_t int_buf)
 {
-  ctx->size = sizeof (struct packet);
-  if (pp_post_recv (ctx, 1) != 1)
+  struct keyNode *curr = head;
+  bool key_exist = false;
+  struct ibv_mr *mr_create;
+
+  while (curr != NULL)
     {
-      printf ("%d%s", 1, "Error server receive");
-      return 1;
+      if (strcmp (curr->key, packet->key) == 0)
+        {
+
+          size_t vallen = strlen (curr->value) + 1;
+          if (vallen > MAX_EAGER_MSG_SIZE) // rdv
+            {
+              packet->protocol = 'r';
+              mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
+                                      IBV_ACCESS_REMOTE_WRITE
+                                      | IBV_ACCESS_LOCAL_WRITE
+                                      | IBV_ACCESS_REMOTE_READ);
+
+              packet->remote_addr = mr_create->addr;
+              packet->remote_key = mr_create->rkey;
+              packet->value_lenght = vallen;
+              key_exist = true;
+              return send_packet (ctx);
+            }
+          else
+            { //eager
+              packet->protocol = 'e';
+              strncpy(packet->value, curr->value, sizeof (packet->value));
+              key_exist = true;
+              return send_packet (ctx);
+            }
+        }
+      curr = curr->next;
     }
-  return 0;
+
+  packet->protocol = 'e';
+  strcpy(packet->value, "");
+  return send_packet (ctx);
 }
 
-int
-handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
+int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
 {
   switch (pack->request_type)
     {
@@ -993,48 +1026,9 @@ handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id
       case 'g':
         printf ("New Get Request:\n\tKEY: %s\n", pack->key);
       fflush (stdout);
-      return server_handle_get_request (ctx, pack, buf_id);
+      return server_handle_eager_get (ctx, pack, buf_id);
     }
 }
-
-int
-handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clients)
-{
-  size_t free_buff_ind[NUM_CLIENT] = {0};
-  for (int curr_client = 0; curr_client < number_of_clients; curr_client++)
-    {
-      if (receive_packet_async (ctx[curr_client]))
-        {
-          return 1;
-        }
-    }
-  while (1)
-    {
-      for (int curr_client = 0; curr_client < number_of_clients; curr_client++)
-        {
-          struct ibv_wc wc[WC_BATCH];
-          int ne = ibv_poll_cq (ctx[curr_client]->cq, WC_BATCH, wc);
-
-          if (ne < 0)
-            {
-              fprintf (stderr, "poll CQ failed %d\n", ne);
-              return 1;
-            }
-          if (ne >= 1)
-            {
-              fflush (stdout);
-              handle_request (ctx[curr_client],
-                              (struct packet *) ctx[curr_client]->buf[free_buff_ind[curr_client]],
-                              free_buff_ind[curr_client]);
-              free_buff_ind[curr_client] =
-                  (free_buff_ind[curr_client] + 1) % MAX_HANDLE_REQUESTS;
-              ctx[curr_client]->currBuffer = free_buff_ind[curr_client];
-              receive_packet_async (ctx[curr_client]);
-            }
-        }
-    }
-}
-
 
 
 ///////////////////////////// CLIENT ///////////////////////////////////
