@@ -57,7 +57,7 @@
 #define WC_BATCH (1)
 #define MB 1048576L
 #define MAX_EAGER_MSG_SIZE 4096
-#define NUM_CLIENT 2
+#define NUM_CLIENT 1
 #define MAX_HANDLE_REQUESTS 5
 #define ITER_WARM_UP 6000
 
