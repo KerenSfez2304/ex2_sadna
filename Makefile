@@ -1,7 +1,7 @@
 all: server client
 
-server: bw_template_o.c
-	gcc bw_template_o.c -libverbs -o server
+server: bw_template.c
+	gcc bw_template.c -libverbs -o server
 
 client: server
 	ln -sf server client
