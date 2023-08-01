@@ -1141,6 +1141,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
     }
   fprintf (stderr, "__ici_2b_");
   fflush (stderr);
+  ctx->size = sizeof (struct packet);
   if (pp_post_recv (ctx, 1) != 1)
     {
       fprintf (stderr, "Error receiving the get eager request");
