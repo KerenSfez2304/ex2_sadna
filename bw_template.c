@@ -1037,7 +1037,7 @@ int server_handle_set_request (struct pingpong_context *ctx, struct packet *pack
                                                  | IBV_ACCESS_LOCAL_WRITE);
           pack->request_type = 's';
           pack->protocol = 'r';
-          pack->remote_key = mr_create->remote_key;
+          pack->remote_key = mr_create->rkey;
           pack->remote_addr = mr_create->addr;
           ctx->currBuffer = buf_id;
           send_packet (ctx);
@@ -1081,7 +1081,7 @@ int server_handle_set_request (struct pingpong_context *ctx, struct packet *pack
                                          IBV_ACCESS_REMOTE_WRITE
                                          | IBV_ACCESS_LOCAL_WRITE);
   pack->request_type = 's';
-  pack->remote_key = mr_create->remote_key;
+  pack->remote_key = mr_create->rkey;
   pack->remote_addr = mr_create->addr;
   ctx->currBuffer = buf_id;
   fprintf (stderr, "server sends mr to client\n");
@@ -1138,7 +1138,7 @@ int server_handle_get_request (struct pingpong_context *ctx, struct packet *pack
                                                      IBV_ACCESS_REMOTE_WRITE
                                                      | IBV_ACCESS_LOCAL_WRITE
                                                      | IBV_ACCESS_REMOTE_READ);
-              pack_response->remote_key = mr_create->remote_key;
+              pack_response->remote_key = mr_create->rkey;
               pack_response->remote_addr = mr_create->addr;
               pack_response->value_lenght = vallen;
               ctx->currBuffer = buf_id;
