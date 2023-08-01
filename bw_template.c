@@ -1409,7 +1409,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
         {
           if (!curr->node->writing)
             {
-              server_handle_request (curr->ctx, curr->ctx->curr_buf);
+              server_handle_request (curr->ctx);
               break;
             }
           curr = curr->next;
