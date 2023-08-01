@@ -1393,8 +1393,8 @@ int kv_get (void *kv_handle, const char *key, char **value)
   int ret;
   if (get_packet->protocol == 'e')
     {
-      *value = (char *) malloc (strlen (get_packet->value_lenght) + 1);
-      strncpy(*value, get_packet->value, strlen (get_packet->value_lenght) + 1);
+      *value = (char *) malloc (strlen (get_packet->value) + 1);
+      strncpy(*value, get_packet->value, strlen (get_packet->value) + 1);
     }
   else
     { //rdv
@@ -1406,7 +1406,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
                                             | IBV_ACCESS_LOCAL_WRITE);
       ctx->mr[ctx->currBuffer] = (struct ibv_mr *) clientMR;
       ctx->size = vallen;
-      if (pp_post_send (ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->remote_key))
+      if (pp_post_send (ctx, *value, get_packet->remote_addr, get_packet->remote_key, IBV_WR_RDMA_READ))
         {
           fprintf (stderr, "Error sending the packet");
           return 1;
