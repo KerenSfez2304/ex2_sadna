@@ -1019,8 +1019,6 @@ int eager_kv_set (void *kv_handle, const char *key, const char *value)
 
 int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
 {
-  fprintf (stderr, "deb\n");
-  fflush (stderr);
   struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
   struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
   pack->protocol_type = 'r';
@@ -1028,14 +1026,6 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   size_t size_value = strlen (value) + 1;
   pack->size = size_value;
   strcpy(pack->key, key);
-  fprintf (stderr, "\n");
-  fflush (stderr);
-  fprintf (stderr, pack->key);
-  fflush (stderr);
-  fprintf (stderr, "\n");
-  fflush (stderr);
-  fprintf (stderr, "avant send\n");
-  fflush (stderr);
   ctx->size = sizeof (struct packet);
   if (send_packet (ctx))
     {
@@ -1047,20 +1037,10 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
       return 1;
     }
   struct packet *pack_response = (struct packet *) ctx->buf[ctx->currBuffer];
-  fprintf (stderr, "apres response\n");
-  fflush (stderr);
   struct ibv_mr *ctxMR = (struct ibv_mr *) ctx->mr[ctx->currBuffer];
   struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (char *) value,
                                         size_value, IBV_ACCESS_REMOTE_WRITE
                                                     | IBV_ACCESS_LOCAL_WRITE);
-  fprintf (stderr, "__");
-  fflush (stderr);
-  fprintf (stderr, pack->key);
-  fflush (stderr);
-  fprintf (stderr, "\n");
-  fflush (stderr);
-  fprintf (stderr, "after mr client\n");
-  fflush (stderr);
   ctx->mr[ctx->currBuffer] = clientMR;
   ctx->size = size_value;
   pp_post_send (ctx,
@@ -1068,15 +1048,11 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
                 pack_response->remote_addr,
                 pack_response->rkey,
                 IBV_WR_RDMA_WRITE);
-  fprintf (stderr, "avant completion\n");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1))
     {
       printf ("%s", "Error completions");
       return 1;
     };
-  fprintf (stderr, "apres completion\n");
-  fflush (stderr);
   ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
   // ---- FIN (ACK TO SERVER) -----
   ctx->size = 1;
@@ -1085,8 +1061,6 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
       printf ("%d%s", 1, "Error server send");
       return 1;
     }
-  fprintf (stderr, "ack\n");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1))
     {
       printf ("%s", "Error completions");
@@ -1122,109 +1096,7 @@ int kv_set (void *kv_handle, const char *key, const char *value)
   return response;
 }
 
-//int eager_kv_get(char **value, struct packet * response_pack) {
-//    *value = malloc(strlen(response_pack->value) + 1);
-//    strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
-//    return 0;
-//}
-//
-//int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
-//    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
-//    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//    *value = malloc( pack->size);
-//    struct ibv_mr *temp_mr = ctx->mr[ctx->currBuffer];
-//  fprintf (stderr, "__ici_5_");
-//  fflush (stderr);
-//    struct ibv_mr *curr_client_mr = ibv_reg_mr(ctx->pd,
-//                                               *value,
-//                                               pack->size,
-//                                               IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-//  fprintf (stderr, "__ici_6_");
-//  fflush (stderr);
-//    ctx->mr[ctx->currBuffer] = curr_client_mr;
-//    ctx->size = pack->size;
-//  fprintf (stderr, "__ici_7_");
-//  fflush (stderr);
-//
-//    if (pp_post_send(ctx,
-//                     *value,
-//                     pack->remote_addr,
-//                     pack->rkey,
-//                     IBV_WR_RDMA_READ)) {
-//        printf("%d%s", 1, "Error server send");
-//        return 1;
-//    }
-//  fprintf (stderr, "__ici_8_");
-//  fflush (stderr);
-//    if(pp_wait_completions(ctx, 1)) {
-//        printf("%s", "Error completions");
-//        return 1;
-//    }
-//    ctx->mr[ctx->currBuffer] = temp_mr;
-//    ibv_dereg_mr(curr_client_mr);
-//  fprintf (stderr, "__ici_9_");
-//  fflush (stderr);
-//    return 0;
-//}
-//
-//
-//int kv_get(void *kv_handle, const char *key, char **value) {
-//    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
-//    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//  pack->protocol_type = 'e';
-//    pack->request_type = 'g';
-//    strncpy(pack->key, key, sizeof(pack->key));
-//  fprintf (stderr, "__ici_1_");
-//  fflush (stderr);
-//
-//  ctx->size = sizeof (struct packet);
-//  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
-//    {
-//      fprintf (stderr, "Error sending the get eager request");
-//      return 1;
-//    }
-//
-//  if (pp_wait_completions (ctx, 1) != 0)
-//    {
-//      fprintf (stderr, "Error during completion");
-//      return 1;
-//    }
-//
-//  if (pp_post_recv (ctx, 1) != 1)
-//    {
-//      fprintf (stderr, "Error receiving the get eager request");
-//      return 1;
-//    }
-//
-//  if (pp_wait_completions (ctx, 1) != 0)
-//    {
-//      fprintf (stderr, "Error during completion");
-//      return 1;
-//    }
-//
-//  fprintf (stderr, "__ici_3_");
-//  fflush (stderr);
-//    struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//    int response;
-//    if (response_pack->protocol_type == 'e') {
-//        // EAGER PROTOCOL
-//        fprintf (stderr, "__ici_4_set_");
-//        fflush (stderr);
-//
-////        response = eager_kv_get(value, response_pack);
-//        *value = (char *) malloc (strlen(response_pack->value) + 1);
-//        strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
-//        response = 0;
-//    }
-//    else {
-//        // RENDEZVOUS PROTOCOL
-//        fprintf (stderr, "__ici_4_rdv_");
-//        fflush (stderr);
-//        response = rendezvous_kv_get(kv_handle, key, value);
-//    }
-//    ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
-//    return response;
-//}
+
 int kv_get (void *kv_handle, const char *key, char **value)
 {
   struct pingpong_context *ctx = kv_handle;
@@ -1234,39 +1106,28 @@ int kv_get (void *kv_handle, const char *key, char **value)
   get_packet->request_type = 'g';
   strncpy(get_packet->key, key, sizeof (get_packet->key));
 //  ctx->size = sizeof (struct packet);
-  fprintf (stderr, "__ici_1_");
-  fflush (stderr);
   ctx->size = sizeof (struct packet);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Error sending the get eager request");
       return 1;
     }
-  fprintf (stderr, "__ici_2a_");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
       return 1;
     }
-  fprintf (stderr, "__ici_2b_");
-  fflush (stderr);
   ctx->size = sizeof (struct packet);
   if (pp_post_recv (ctx, 1) != 1)
     {
       fprintf (stderr, "Error receiving the get eager request");
       return 1;
     }
-  fprintf (stderr, "__ici_2c_");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
       return 1;
     }
-
-  fprintf (stderr, "__ici_3_");
-  fflush (stderr);
 
   int ret;
   if (get_packet->protocol_type == 'e')
@@ -1276,31 +1137,21 @@ int kv_get (void *kv_handle, const char *key, char **value)
     }
   else
     { //rdv
-      fprintf (stderr, "__ici_4_rdv_");
-      fflush (stderr);
       size_t vallen = get_packet->size;
 //      *for_val = calloc (vallen, 1);
       *value = malloc (vallen);
       struct ibv_mr *ctxMR = ctx->mr[ctx->currBuffer];
-      fprintf (stderr, "__ici_5_");
-      fflush (stderr);
       struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) *value, vallen,
                                             IBV_ACCESS_REMOTE_WRITE
                                             | IBV_ACCESS_LOCAL_WRITE);
-      fprintf (stderr, "__ici_6_");
-      fflush (stderr);
       ctx->mr[ctx->currBuffer] = (struct ibv_mr *) clientMR;
       ctx->size = vallen;
-      fprintf (stderr, "__ici_7_");
-      fflush (stderr);
       //fin ?
       if (pp_post_send (ctx, *value, get_packet->remote_addr, get_packet->rkey, IBV_WR_RDMA_READ))
         {
           fprintf (stderr, "Error sending the packet");
           return 1;
         }
-      fprintf (stderr, "__ici_8_");
-      fflush (stderr);
       if (pp_wait_completions (ctx, 1) != 0)
         {
           fprintf (stderr, "Error during completion");
@@ -1310,8 +1161,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ibv_dereg_mr (clientMR);
 //      strcpy(*value, for_val);
 //      free (for_val);
-      fprintf (stderr, "__ici_9_");
-      fflush (stderr);
 //      return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
