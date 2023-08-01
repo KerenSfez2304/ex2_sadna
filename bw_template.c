@@ -1478,18 +1478,18 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   return 0;
 }
 
-void test_performance (void *kv_handle)
+void compute_measurements (void *kv_handle)
 {
   long double real_iters = 100;
   long double warmp_up_iters = 50;
   char key[12];
-  printf ("\n%s\n\n", "+++++++++++++++ SET THROUGHPUT MEASURE +++++++++++++++");
-  printf ("%s\n", "------- Eager Protocol -------");
+  fprintf (stdout, "___________ KV_SET THROUGHPUT ____________\n");
+  fprintf (stdout, "Eager Protocol\n");
   for (long int message_size = 1; message_size <= MB; message_size *= 2)
     {
       if (message_size == MAX_EAGER_MSG_SIZE)
         {
-          printf ("%s\n", "------- Rendezvous Protocol -------");
+          fprintf (stdout, "Rendez-vous Protocol\n");
         }
       snprintf(key, sizeof (key), "%ld", message_size);
       char *largeValue = calloc (message_size, sizeof (char));
@@ -1510,13 +1510,13 @@ void test_performance (void *kv_handle)
       long double throughput = gb_unit / diff_time;
       printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
     }
-  printf ("\n%s\n\n", "+++++++++++++++ GET THROUGHPUT MEASURE +++++++++++++++");
-  printf ("%s\n", "------- Eager Protocol -------");
+  fprintf (stdout, "___________ KV_GET THROUGHPUT ____________\n");
+  fprintf (stdout, "Eager Protocol\n");
   for (long int message_size = 1; message_size <= MB; message_size *= 2)
     {
       if (message_size == MAX_EAGER_MSG_SIZE)
         {
-          printf ("%s\n", "------- Rendezvous Protocol -------");
+          fprintf (stdout, "Rendez-vous Protocol\n");
         }
       snprintf(key, sizeof (key), "%ld", message_size);
       char *largeValue = calloc (message_size, sizeof (char));
@@ -1569,7 +1569,7 @@ int main (int argc, char *argv[])
 //          fprintf (stderr, "Client failed to connect.");
 //          return 1;
 //        }
-//      test_performance(kv_handle);
+//      compute_measurements(kv_handle);
       run_tests_one_client (servername);
     }
   else
@@ -1589,7 +1589,6 @@ int main (int argc, char *argv[])
 }
 
 //todo: 1. waiting list
-// 2. send packet, receive packet
 // 3. free
 // 4. change the test_performance
 // 4. througput
