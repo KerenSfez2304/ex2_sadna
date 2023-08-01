@@ -1093,13 +1093,13 @@ int kv_get(void *kv_handle, const char *key, char **value) {
 
   fprintf (stderr, "__ici_3_");
   fflush (stderr);
-    struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
+//    struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
     int response;
-    if (response_pack->protocol_type == 'e') {
+    if (pack->protocol_type == 'e') {
         // EAGER PROTOCOL
         fprintf (stderr, "__ici_4_set_");
         fflush (stderr);
-        response = eager_kv_get(value, response_pack);
+        response = eager_kv_get(value, pack);
     }
     else {
         // RENDEZVOUS PROTOCOL
