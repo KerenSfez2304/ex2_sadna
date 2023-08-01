@@ -1099,6 +1099,12 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
 
 int kv_set (void *kv_handle, const char *key, const char *value)
 {
+  fprintf (stderr, "_____");
+  fflush (stderr);
+  fprintf (stderr, key);
+  fflush (stderr);
+  fprintf (stderr, "_____\n");
+  fflush (stderr);
   int response;
   struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
   unsigned packet_size = strlen (key) + strlen (value);
@@ -1526,8 +1532,7 @@ handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id
     }
 }
 
-int
-handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clients)
+int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clients)
 {
   size_t free_buff_ind[NUM_CLIENT] = {0};
   for (int curr_client = 0; curr_client < number_of_clients; curr_client++)
