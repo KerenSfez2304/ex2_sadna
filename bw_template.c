@@ -61,9 +61,7 @@
 #define MAX_HANDLE_REQUESTS 5
 #define ITER_WARM_UP 6000
 
-int argc_;
-char **argv_;
-struct keyNode *head;
+
 
 enum {
     PINGPONG_RECV_WRID = 1,
@@ -97,8 +95,10 @@ struct packetNode {
 };
 
 static int page_size;
-int argc_global;
-char **argv_global;
+int argc_;
+char **argv_;
+struct keyNode *head = NULL;
+struct packetNode *waiting_queue = NULL;
 
 struct pingpong_context {
     struct ibv_context *context;
@@ -963,25 +963,25 @@ void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->currBuffer];
 
-//  if (packet->request_type == 'f')
-//    {
-//      set_status_non_writing (packet);
-//    }
+  if (packet->request_type == 'f')
+    {
+      set_status_non_writing (packet);
+    }
 
-//  struct keyNode *currNode = get_status_writing (packet);
-//  if (currNode)
-//    { // the status of the key-value is on writing state
-//      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
-//      if (newQueue == NULL)
-//        {
-//          fprintf (stdout, "Fail allocating memory");
-//        }
-//      newQueue->ctx = ctx;
-//      newQueue->node = currNode;
-//      newQueue->next = waiting_queue;
-//      waiting_queue = newQueue;
-//      return;
-//    }
+  struct keyNode *currNode = get_status_writing (packet);
+  if (currNode)
+    { // the status of the key-value is on writing state
+      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
+      if (newQueue == NULL)
+        {
+          fprintf (stdout, "Fail allocating memory");
+        }
+      newQueue->ctx = ctx;
+      newQueue->node = currNode;
+      newQueue->next = waiting_queue;
+      waiting_queue = newQueue;
+      return;
+    }
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
@@ -1260,7 +1260,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
 
   /* Send FIN message */
   ctx->size = 1;
-//  packet->request_type = 'f';
+  packet->request_type = 'f';
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
   ibv_dereg_mr (clientMR);
@@ -1386,8 +1386,8 @@ int kv_close (void *kv_handle)
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
-//  waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
-//  waiting_queue = NULL;
+  waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
+
   for (int i = 0; i < NUM_CLIENT; i++)
     {
       // todo (not really a todo): first free buffer for each client (each client has MAX_HANDLE_BUF(5) buffers
@@ -1404,16 +1404,16 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
   while (true)
     {
-//      struct packetNode *curr = waiting_queue;
-//      while (curr != NULL)
-//        {
-//          if (!curr->node->writing)
-//            {
-//              server_handle_request (curr->ctx, curr->ctx->curr_buf);
-//              break;
-//            }
-//          curr = curr->next;
-//        }
+      struct packetNode *curr = waiting_queue;
+      while (curr != NULL)
+        {
+          if (!curr->node->writing)
+            {
+              server_handle_request (curr->ctx, curr->ctx->curr_buf);
+              break;
+            }
+          curr = curr->next;
+        }
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
@@ -1442,6 +1442,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
         }
     }
   free (head);
+  free(waiting_queue);
   return 0;
 }
 
@@ -1558,5 +1559,6 @@ int main (int argc, char *argv[])
 //todo: 1. waiting list
 // 2. send packet, receive packet
 // 3. free
+// 4. change the test_performance
 // 4. througput
 // 5. pdf
