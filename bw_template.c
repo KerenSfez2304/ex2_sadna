@@ -974,25 +974,25 @@ void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->currBuffer];
 
-  if (packet->request_type == 'f')
-    {
-      set_status_non_writing (packet);
-    }
+//  if (packet->request_type == 'f')
+//    {
+//      set_status_non_writing (packet);
+//    }
 
-  struct keyNode *currNode = get_status_writing (packet);
-  if (currNode)
-    { // the status of the key-value is on writing state
-      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
-      if (newQueue == NULL)
-        {
-          fprintf (stdout, "Fail allocating memory");
-        }
-      newQueue->ctx = ctx;
-      newQueue->node = currNode;
-      newQueue->next = waiting_queue;
-      waiting_queue = newQueue;
-      return;
-    }
+//  struct keyNode *currNode = get_status_writing (packet);
+//  if (currNode)
+//    { // the status of the key-value is on writing state
+//      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
+//      if (newQueue == NULL)
+//        {
+//          fprintf (stdout, "Fail allocating memory");
+//        }
+//      newQueue->ctx = ctx;
+//      newQueue->node = currNode;
+//      newQueue->next = waiting_queue;
+//      waiting_queue = newQueue;
+//      return;
+//    }
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
@@ -1292,7 +1292,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
 
   /* Send FIN message */
   ctx->size = 1;
-  packet->request_type = 'f';
+//  packet->request_type = 'f';
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
   ibv_dereg_mr (clientMR);
