@@ -1564,11 +1564,11 @@ int main (int argc, char *argv[])
   if (servername)
     { //client
       struct pingpong_context *kv_handle;
-//      if (kv_open (servername, (void **) &kv_handle))
-//        {
-//          fprintf (stderr, "Client failed to connect.");
-//          return 1;
-//        }
+      if (kv_open (servername, (void **) &kv_handle))
+        {
+          fprintf (stderr, "Client failed to connect.");
+          return 1;
+        }
       compute_measurements(kv_handle);
 //      run_tests_one_client (servername);
     }
