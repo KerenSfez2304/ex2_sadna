@@ -970,7 +970,7 @@ int server_handle_eager_get (
 
 void server_handle_request (struct pingpong_context *ctx)
 {
-  struct packet *packet = ctx->buf[int_buf];
+  struct packet *packet = ctx->buf[ctx->currBuffer];
 
 //  if (packet->request_type == 'f')
 //    {
