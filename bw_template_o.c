@@ -1335,7 +1335,7 @@ int run_client (char * servername) {
 //  run_tests_one_client(servername);
   // CODE TEST - MULTIPLE CLIENTS
 //    run_tests_multiple_clients(servername);
-   THROUGHPUT TEST
+//   THROUGHPUT TEST
     void *kv_handle;
     kv_open(servername, &kv_handle);
     test_performance(kv_handle);
