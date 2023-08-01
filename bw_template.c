@@ -1337,6 +1337,8 @@ int server_handle_get_request(struct pingpong_context *ctx, struct packet *pack,
             size_t vallen = strlen (curr->value) + 1;
             if (vallen > MAX_EAGER_MSG_SIZE) {
                 // RENDEZVOUS PROTOCOL
+                fprintf(stderr, "_RDV_\n");
+                fflush(stderr);
                 pack_response->protocol_type = 'r';
                 struct ibv_mr* mr_create = ibv_reg_mr(ctx->pd, curr->value, vallen,
                                                       IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ);
