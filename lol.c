@@ -718,8 +718,7 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
 ///////////////////////////// SERVER ///////////////////////////////////
 
 
-void
-server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
+void server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
 {
 
     struct keyNode *curr = head;

@@ -760,226 +760,9 @@ compute_throughput (int iters, size_t message_size, clock_t start_time, clock_t 
   return throughput;
 }
 
+
 ///////////////////////////// SERVER ///////////////////////////////////
 
-
-//int connect_main (char *servername, int argc, char *argv[], struct pingpong_context **save_ctx)
-//{
-//  struct ibv_device **dev_list;
-//  struct ibv_device *ib_dev;
-//  struct pingpong_context *ctx;
-//  struct pingpong_dest my_dest;
-//  struct pingpong_dest *rem_dest;
-//  char *ib_devname = NULL;
-//  int port = 4792;
-//  int ib_port = 1;
-//  enum ibv_mtu mtu = IBV_MTU_2048;
-//  int rx_depth = 5000;
-//  int tx_depth = 5000;
-//  int iters = 50000;
-//  int use_event = 0;
-//  int size = MB;
-//  int sl = 0;
-//  int gidx = -1;
-//  char gid[33];
-//
-//  srand48 (getpid () * time (NULL));
-//
-//  while (1)
-//    {
-//      int c;
-//
-//      static struct option long_options[] = {
-//          {.name = "port", .has_arg = 1, .val = 'p'},
-//          {.name = "ib-dev", .has_arg = 1, .val = 'd'},
-//          {.name = "ib-port", .has_arg = 1, .val = 'i'},
-//          {.name = "size", .has_arg = 1, .val = 's'},
-//          {.name = "mtu", .has_arg = 1, .val = 'm'},
-//          {.name = "rx-depth", .has_arg = 1, .val = 'r'},
-//          {.name = "iters", .has_arg = 1, .val = 'n'},
-//          {.name = "sl", .has_arg = 1, .val = 'l'},
-//          {.name = "events", .has_arg = 0, .val = 'e'},
-//          {.name = "gid-idx", .has_arg = 1, .val = 'g'},
-//          {0}
-//      };
-//
-//      c = getopt_long (argc, argv, "p:d:i:s:m:r:n:l:eg:", long_options, NULL);
-//      if (c == -1)
-//        break;
-//
-//      switch (c)
-//        {
-//          case 'p':
-//            port = strtol (optarg, NULL, 0);
-//          if (port < 0 || port > 65535)
-//            {
-//              usage (argv[0]);
-//              return 1;
-//            }
-//          break;
-//
-//          case 'd':
-//            ib_devname = strdup (optarg);
-//          break;
-//
-//          case 'i':
-//            ib_port = strtol (optarg, NULL, 0);
-//          if (ib_port < 0)
-//            {
-//              usage (argv[0]);
-//              return 1;
-//            }
-//          break;
-//
-//          case 's':
-//            size = strtol (optarg, NULL, 0);
-//          break;
-//
-//          case 'm':
-//            mtu = pp_mtu_to_enum (strtol (optarg, NULL, 0));
-//          if (mtu < 0)
-//            {
-//              usage (argv[0]);
-//              return 1;
-//            }
-//          break;
-//
-//          case 'r':
-//            rx_depth = strtol (optarg, NULL, 0);
-//          break;
-//
-//          case 'n':
-//            iters = strtol (optarg, NULL, 0);
-//          break;
-//
-//          case 'l':
-//            sl = strtol (optarg, NULL, 0);
-//          break;
-//
-//          case 'e':
-//            ++use_event;
-//          break;
-//
-//          case 'g':
-//            gidx = strtol (optarg, NULL, 0);
-//          break;
-//
-//          default:
-//            usage (argv[0]);
-//          return 1;
-//        }
-//    }
-//
-////    if (optind == argc - 1)
-////        servername = strdup(argv[optind]);
-////    else if (optind < argc) {
-////        usage(argv[0]);
-////        return 1;
-////    }
-//
-//  page_size = sysconf (_SC_PAGESIZE);
-//
-//  dev_list = ibv_get_device_list (NULL);
-//  if (!dev_list)
-//    {
-//      perror ("Failed to get IB devices list");
-//      return 1;
-//    }
-//
-//  if (!ib_devname)
-//    {
-//      ib_dev = *dev_list;
-//      if (!ib_dev)
-//        {
-//          fprintf (stderr, "No IB devices found\n");
-//          return 1;
-//        }
-//    }
-//  else
-//    {
-//      int i;
-//      for (i = 0; dev_list[i]; ++i)
-//        if (!strcmp (ibv_get_device_name (dev_list[i]), ib_devname))
-//          break;
-//      ib_dev = dev_list[i];
-//      if (!ib_dev)
-//        {
-//          fprintf (stderr, "IB device %s not found\n", ib_devname);
-//          return 1;
-//        }
-//    }
-//
-//  ctx = pp_init_ctx (ib_dev, size, rx_depth, tx_depth, ib_port, use_event, !servername);
-//
-//  if (!ctx) return 1;
-//
-////    ctx->currBuffer = 0;
-////    ctx->routs = pp_post_recv(ctx, ctx->rx_depth);
-////    if (ctx->routs < ctx->rx_depth) {
-////        fprintf(stderr, "Couldn't post receive (%d)\n", ctx->routs);
-////        return 1;
-////    }
-//
-//  if (use_event)
-//    if (ibv_req_notify_cq (ctx->cq, 0))
-//      {
-//        fprintf (stderr, "Couldn't request CQ notification\n");
-//        return 1;
-//      }
-//
-//  if (pp_get_port_info (ctx->context, ib_port, &ctx->portinfo))
-//    {
-//      fprintf (stderr, "Couldn't get port info\n");
-//      return 1;
-//    }
-//
-//  my_dest.lid = ctx->portinfo.lid;
-//  if (ctx->portinfo.link_layer == IBV_LINK_LAYER_INFINIBAND && !my_dest.lid)
-//    {
-//      fprintf (stderr, "Couldn't get local LID\n");
-//      return 1;
-//    }
-//
-//  if (gidx >= 0)
-//    {
-//      if (ibv_query_gid (ctx->context, ib_port, gidx, &my_dest.gid))
-//        {
-//          fprintf (stderr, "Could not get local gid for gid index %d\n", gidx);
-//          return 1;
-//        }
-//    }
-//  else
-//    memset(&my_dest.gid, 0, sizeof my_dest.gid);
-//
-//  my_dest.qpn = ctx->qp->qp_num;
-//  my_dest.psn = lrand48 () & 0xffffff;
-//  inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
-////    printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-////           my_dest.lid, my_dest.qpn, my_dest.psn, gid);
-//
-//
-//  if (servername)
-//    {
-//      rem_dest = pp_client_exch_dest (servername, port, &my_dest);
-//    }
-//  else
-//    rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
-//
-//  if (!rem_dest)
-//    return 1;
-//
-//  inet_ntop (AF_INET6, &rem_dest->gid, gid, sizeof gid);
-////    printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n",
-////           rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid);
-//
-//  if (servername)
-//    if (pp_connect_ctx (ctx, ib_port, my_dest.psn, mtu, sl, rem_dest, gidx))
-//      return 1;
-//  *save_ctx = ctx;
-//  ibv_free_device_list (dev_list);
-//  free (rem_dest);
-//  return 0;
-//}
 
 int send_packet (struct pingpong_context *ctx)
 {
@@ -1013,33 +796,53 @@ int receive_packet (struct pingpong_context *ctx)
   return 0;
 }
 
-
-int server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
-                               size_t buf_id)
+int
+server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
 {
   struct keyNode *curr = head;
+
   while (curr != NULL)
     {
-      if (strcmp (curr->key, pack->key) == 0)
+      if (strcmp (curr->key, packet->key) == 0)
         {
-          if (pack->protocol == 'e')
-            {
-              // EAGER PROTOCOL
-              strncpy(curr->value, pack->value, sizeof (pack->value));
-              return 0;
-            }
-          // RENDEZVOUS PROTOCOL
+//          free (curr->value);
+          strncpy(curr->value, packet->value, sizeof (packet->value));
+          return 0;
+        }
+      curr = curr->next;
+    }
 
-          curr->value = calloc (pack->value_lenght, 1);
-          pack->protocol = 'r';
-          struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, curr->value, pack->value_lenght,
-                                                 IBV_ACCESS_REMOTE_WRITE
-                                                 | IBV_ACCESS_LOCAL_WRITE);
-          pack->request_type = 's';
-          pack->protocol = 'r';
-          pack->remote_key = mr_create->rkey;
-          pack->remote_addr = mr_create->addr;
-          ctx->currBuffer = buf_id;
+  struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
+  new_head->value = (char *) malloc (sizeof (packet->value));
+  // todo: release this
+  strncpy(new_head->key, packet->key, sizeof (packet->key));
+  strncpy(new_head->value, packet->value, sizeof (packet->value));
+  new_head->next = head;
+  head = new_head;
+  return 0;
+}
+
+int
+server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
+{
+  struct keyNode *curr = head;
+  size_t keylen = strlen (packet->key) + 1;
+  size_t vallen = packet->value_lenght;
+  struct ibv_mr *mr_create;
+  while (curr != NULL)
+    {
+      if (strcmp (curr->key, packet->key) == 0)
+        {
+          curr->writing = true;
+//          free (curr->value);
+          curr->value = calloc (vallen, 1);
+          packet->protocol = 'r';
+          mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
+                                  IBV_ACCESS_REMOTE_WRITE
+                                  | IBV_ACCESS_LOCAL_WRITE);
+          packet->request_type = 's';
+          packet->remote_addr = mr_create->addr;
+          packet->remote_key = mr_create->rkey;
           send_packet (ctx);
           // WAIT FOR FIN
           ctx->size = 1;
@@ -1053,53 +856,40 @@ int server_handle_set_request (struct pingpong_context *ctx, struct packet *pack
               printf ("%s", "Error completions");
               return 1;
             }
-
+          return 0;
         }
       curr = curr->next;
     }
 
-  // The key is not in our database
+  // Need to add the key in the database
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
-  strncpy(new_head->key, pack->key, sizeof(pack->key));
-
-  if (pack->protocol == 'e')
-    {
-      // EAGER PROTOCOL
-      new_head->value = (char *) malloc (sizeof (pack->value));
-      strncpy(new_head->value, pack->value, sizeof (pack->value));
-      new_head->next = head;
-      head = new_head;
-      return 0;
-    }
-  // RENDEZVOUS PROTOCOL
-//    handle_server_set_request_rendezvous(ctx, pack, NULL, buf_id);
-  new_head->value = calloc(pack->value_lenght, 1);
-//      calloc (pack->size + 1, 1);
-// todo: deal with the free
-  pack->protocol = 'r';
-  struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, new_head->value, pack->value_lenght,
+  strncpy(new_head->key, packet->key, sizeof (packet->key));
+  new_head->value = calloc (packet->value_lenght, 1);
+  // todo: deal with the free
+  packet->protocol = 'r';
+  struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, new_head->value, pecket->size,
                                          IBV_ACCESS_REMOTE_WRITE
                                          | IBV_ACCESS_LOCAL_WRITE);
-  pack->request_type = 's';
-  pack->remote_key = mr_create->rkey;
-  pack->remote_addr = mr_create->addr;
-  ctx->currBuffer = buf_id;
+  packet->request_type = 's';
+  packet->remote_key = mr_create->rkey;
+  packet->remote_addr = mr_create->addr;
+
   fprintf (stderr, "server sends mr to client\n");
-  fflush(stderr);
+  fflush (stderr);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Client couldn't post send.\n");
       return 1;
     }
   fprintf (stderr, "server waits for completion of mr\n");
-  fflush(stderr);
+  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
       return 1;
     }
   fprintf (stderr, "server waits for fin\n");
-  fflush(stderr);
+  fflush (stderr);
   // WAIT FOR FIN
   ctx->size = 1;
   if (pp_post_recv (ctx, 1) != 1)
@@ -1116,12 +906,27 @@ int server_handle_set_request (struct pingpong_context *ctx, struct packet *pack
   new_head->next = head;
   head = new_head;
   fprintf (stderr, "server got fin\n");
-  fflush(stderr);
+  fflush (stderr);
   return 0;
 }
 
-int server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
-                               size_t buf_id)
+int
+server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
+                           size_t buf_id)
+{
+  if (pack->protocol == 'e')
+    {
+      return server_handle_eager_set (ctx, pack);
+    }
+  else
+    {
+      return server_handle_rdv_set (ctx, pack);
+    }
+}
+
+int
+server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
+                           size_t buf_id)
 {
   struct packet *pack_response = (struct packet *) ctx->buf[buf_id];
   struct keyNode *curr = head;
@@ -1169,7 +974,8 @@ int receive_packet_async (struct pingpong_context *ctx)
   return 0;
 }
 
-int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
+int
+handle_request (struct pingpong_context *ctx, struct packet *pack, size_t buf_id)
 {
   switch (pack->request_type)
     {
@@ -1191,7 +997,8 @@ int handle_request (struct pingpong_context *ctx, struct packet *pack, size_t bu
     }
 }
 
-int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clients)
+int
+handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clients)
 {
   size_t free_buff_ind[NUM_CLIENT] = {0};
   for (int curr_client = 0; curr_client < number_of_clients; curr_client++)
@@ -1488,7 +1295,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
       return 1;
     }
   fprintf (stderr, "client waits for mr from server\n");
-  fflush(stderr);
+  fflush (stderr);
   ctx->size = sizeof (struct packet);
   if (receive_packet (ctx))
     {
@@ -1502,7 +1309,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   ctx->mr[ctx->currBuffer] = clientMR;
   ctx->size = size_value;
   fprintf (stderr, "client rdma write\n");
-  fflush(stderr);
+  fflush (stderr);
   pp_post_send (ctx,
                 value,
                 pack_response->remote_addr,
@@ -1515,7 +1322,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
     };
   ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
   fprintf (stderr, "client sends fin\n");
-  fflush(stderr);
+  fflush (stderr);
   // ---- FIN (ACK TO SERVER) -----
   ctx->size = 1;
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
@@ -1639,8 +1446,8 @@ int kv_close (void *kv_handle)
 }
 
 
-///////////////////////////// RUN ///////////////////////////////////
 
+///////////////////////////// RUN ///////////////////////////////////
 
 int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
@@ -1652,7 +1459,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
       // todo (not really a todo): first free buffer for each client (each client has MAX_HANDLE_BUF(5) buffers
       // so at the beginning for each client the first free buffer is the one
       // with index 0 from the 5 buffers he has
-      clients_ctx[i]->size = sizeof( struct packet);
+      clients_ctx[i]->size = sizeof (struct packet);
       clients_ctx[i]->currBuffer = 0;
       if (pp_post_recv (clients_ctx[i], 1) != 1)
         {
@@ -1692,8 +1499,9 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                               clients_ctx[i]->currBuffer);
 //              server_handle_request (clients_ctx[i], free_b[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
-              clients_ctx[i]->currBuffer = (clients_ctx[i]->currBuffer + 1)  % MAX_HANDLE_REQUESTS;
-              clients_ctx[i]->size = sizeof(struct packet);
+              clients_ctx[i]->currBuffer =
+                  (clients_ctx[i]->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+              clients_ctx[i]->size = sizeof (struct packet);
               if (pp_post_recv (clients_ctx[i], 1) != 1)
                 {
                   fprintf (stderr, "Server couldn't receive the packet");
@@ -1797,7 +1605,7 @@ int main (int argc, char *argv[])
 //          fprintf (stderr, "Client failed to connect.");
 //          return 1;
 //        }
-      run_tests_one_client(servername);
+      run_tests_one_client (servername);
     }
   else
     { // server
