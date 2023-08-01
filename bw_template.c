@@ -1028,6 +1028,8 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   size_t size_value = strlen (value) + 1;
   pack->size = size_value;
   strcpy(pack->key, key);
+  fprintf (stderr, pack->key);
+  fflush (stderr);
   fprintf (stderr, "avant send\n");
   fflush (stderr);
   if (send_packet (ctx))
@@ -1371,7 +1373,7 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
     }
   // RENDEZVOUS PROTOCOL
 //    handle_server_set_request_rendezvous(ctx, pack, NULL, buf_id);
-  new_head->value = (char *) malloc(pack->size);
+  new_head->value = calloc(pack->size, 1);
 //      calloc (pack->size + 1, 1);
 // todo: deal with the free
   pack->protocol_type = 'r';
