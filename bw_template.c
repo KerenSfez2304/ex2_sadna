@@ -1066,14 +1066,32 @@ int kv_get(void *kv_handle, const char *key, char **value) {
     strncpy(pack->key, key, sizeof(pack->key));
   fprintf (stderr, "__ici_1_");
   fflush (stderr);
-    if (send_packet(ctx)) {
-        return 1;
+
+  ctx->size = sizeof (struct packet);
+  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
+    {
+      fprintf (stderr, "Error sending the get eager request");
+      return 1;
     }
-  fprintf (stderr, "__ici_2_");
-  fflush (stderr);
-    if(receive_packet(ctx)) {
-        return 1;
+
+  if (pp_wait_completions (ctx, 1) != 0)
+    {
+      fprintf (stderr, "Error during completion");
+      return 1;
     }
+
+  if (pp_post_recv (ctx, 1) != 1)
+    {
+      fprintf (stderr, "Error receiving the get eager request");
+      return 1;
+    }
+
+  if (pp_wait_completions (ctx, 1) != 0)
+    {
+      fprintf (stderr, "Error during completion");
+      return 1;
+    }
+
   fprintf (stderr, "__ici_3_");
   fflush (stderr);
     struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
@@ -1082,7 +1100,10 @@ int kv_get(void *kv_handle, const char *key, char **value) {
         // EAGER PROTOCOL
         fprintf (stderr, "__ici_4_set_");
         fflush (stderr);
-        response = eager_kv_get(value, response_pack);
+//        response = eager_kv_get(value, response_pack);
+        *value = (char *) malloc (response_pack->size + 1);
+        strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
+        response = 0;
     }
     else {
         // RENDEZVOUS PROTOCOL

@@ -1349,7 +1349,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
     int ret;
     if (get_packet->protocol == 'e')
     {
-//        *value = (char *) malloc (get_packet->value_length + 1);
+        *value = (char *) malloc (get_packet->value_length + 1);
         strcpy(*value, get_packet->value_e);
     }
     else
