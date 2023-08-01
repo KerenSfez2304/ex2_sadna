@@ -1012,167 +1012,86 @@ int kv_set(void *kv_handle, const char *key, const char *value) {
     return response;
 }
 
-//int eager_kv_get(char **value, struct packet * response_pack) {
-//    *value = malloc(strlen(response_pack->value) + 1);
-//    strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
-//    return 0;
-//}
-//
-//int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
-//    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
-//    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//    *value = malloc( pack->size);
-//    struct ibv_mr *temp_mr = ctx->mr[ctx->currBuffer];
-//  fprintf (stderr, "__ici_5_");
-//  fflush (stderr);
-//    struct ibv_mr *curr_client_mr = ibv_reg_mr(ctx->pd,
-//                                               *value,
-//                                               pack->size,
-//                                               IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
-//  fprintf (stderr, "__ici_6_");
-//  fflush (stderr);
-//    ctx->mr[ctx->currBuffer] = curr_client_mr;
-//    ctx->size = pack->size;
-//  fprintf (stderr, "__ici_7_");
-//  fflush (stderr);
-//
-//    if (pp_post_send(ctx,
-//                     *value,
-//                     pack->remote_addr,
-//                     pack->rkey,
-//                     IBV_WR_RDMA_READ)) {
-//        printf("%d%s", 1, "Error server send");
-//        return 1;
-//    }
-//  fprintf (stderr, "__ici_8_");
-//  fflush (stderr);
-//    if(pp_wait_completions(ctx, 1)) {
-//        printf("%s", "Error completions");
-//        return 1;
-//    }
-//    ctx->mr[ctx->currBuffer] = temp_mr;
-//    ibv_dereg_mr(curr_client_mr);
-//  fprintf (stderr, "__ici_9_");
-//  fflush (stderr);
-//    return 0;
-//}
-//
-//
-//int kv_get(void *kv_handle, const char *key, char **value) {
-//    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
-//    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//    pack->request_type = 'g';
-//    strncpy(pack->key, key, sizeof(pack->key));
-//  fprintf (stderr, "__ici_1_");
-//  fflush (stderr);
-//    if (send_packet(ctx)) {
-//        return 1;
-//    }
-//  fprintf (stderr, "__ici_2_");
-//  fflush (stderr);
-//    if(receive_packet(ctx)) {
-//        return 1;
-//    }
-//  fprintf (stderr, "__ici_3_");
-//  fflush (stderr);
-//    struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
-//    int response;
-//    if (response_pack->protocol_type == 'e') {
-//        // EAGER PROTOCOL
-//        fprintf (stderr, "__ici_4_set_");
-//        fflush (stderr);
-//        response = eager_kv_get(value, response_pack);
-//    }
-//    else {
-//        // RENDEZVOUS PROTOCOL
-//        fprintf (stderr, "__ici_4_rdv_");
-//        fflush (stderr);
-//        response = rendezvous_kv_get(kv_handle, key, value);
-//    }
-//    ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
-//    return response;
-//}
-int kv_get (void *kv_handle, const char *key, char **value)
-{
-  struct pingpong_context *ctx = kv_handle;
-  struct packet *get_packet = (struct packet *) ctx->buf[ctx->currBuffer];
+int eager_kv_get(char **value, struct packet * response_pack) {
+    *value = malloc(strlen(response_pack->value) + 1);
+    strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
+    return 0;
+}
 
-  get_packet->protocol_type = 'e';
-  get_packet->request_type = 'g';
-  strncpy(get_packet->key, key, sizeof(get_packet->key));
-//  ctx->size = sizeof (struct packet);
+int rendezvous_kv_get (void *kv_handle, const char *key, char **value) {
+    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
+    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
+    *value = malloc( pack->size);
+    struct ibv_mr *temp_mr = ctx->mr[ctx->currBuffer];
+  fprintf (stderr, "__ici_5_");
+  fflush (stderr);
+    struct ibv_mr *curr_client_mr = ibv_reg_mr(ctx->pd,
+                                               *value,
+                                               pack->size,
+                                               IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
+  fprintf (stderr, "__ici_6_");
+  fflush (stderr);
+    ctx->mr[ctx->currBuffer] = curr_client_mr;
+    ctx->size = pack->size;
+  fprintf (stderr, "__ici_7_");
+  fflush (stderr);
+
+    if (pp_post_send(ctx,
+                     *value,
+                     pack->remote_addr,
+                     pack->rkey,
+                     IBV_WR_RDMA_READ)) {
+        printf("%d%s", 1, "Error server send");
+        return 1;
+    }
+  fprintf (stderr, "__ici_8_");
+  fflush (stderr);
+    if(pp_wait_completions(ctx, 1)) {
+        printf("%s", "Error completions");
+        return 1;
+    }
+    ctx->mr[ctx->currBuffer] = temp_mr;
+    ibv_dereg_mr(curr_client_mr);
+  fprintf (stderr, "__ici_9_");
+  fflush (stderr);
+    return 0;
+}
+
+
+int kv_get(void *kv_handle, const char *key, char **value) {
+    struct pingpong_context *ctx = (struct pingpong_context*) kv_handle;
+    struct packet *pack = (struct packet*)ctx->buf[ctx->currBuffer];
+  pack->protocol = 'e';
+    pack->request_type = 'g';
+    strncpy(pack->key, key, sizeof(pack->key));
   fprintf (stderr, "__ici_1_");
   fflush (stderr);
-  ctx->size = sizeof (struct packet);
-  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
-    {
-      fprintf (stderr, "Error sending the get eager request");
-      return 1;
+    if (send_packet(ctx)) {
+        return 1;
     }
-
-  if (pp_wait_completions (ctx, 1) != 0)
-    {
-      fprintf (stderr, "Error during completion");
-      return 1;
+  fprintf (stderr, "__ici_2_");
+  fflush (stderr);
+    if(receive_packet(ctx)) {
+        return 1;
     }
-
-  if (pp_post_recv (ctx, 1) != 1)
-    {
-      fprintf (stderr, "Error receiving the get eager request");
-      return 1;
-    }
-
-  if (pp_wait_completions (ctx, 1) != 0)
-    {
-      fprintf (stderr, "Error during completion");
-      return 1;
-    }
-
   fprintf (stderr, "__ici_3_");
   fflush (stderr);
-
-  int ret;
-  if (get_packet->protocol_type == 'e')
-    {
-        *value = (char *) malloc (get_packet->size + 1);
-      strncpy(*value, get_packet->value, get_packet->size);
+    struct packet *response_pack = (struct packet*)ctx->buf[ctx->currBuffer];
+    int response;
+    if (response_pack->protocol_type == 'e') {
+        // EAGER PROTOCOL
+        fprintf (stderr, "__ici_4_set_");
+        fflush (stderr);
+        response = eager_kv_get(value, response_pack);
     }
-  else
-    { //rdv
-      fprintf (stderr, "__ici_4_rdv_");
-      fflush (stderr);
-      size_t vallen = get_packet->size;
-//      *for_val = calloc (vallen, 1);
-      *value = malloc (vallen);
-      struct ibv_mr *ctxMR = ctx->mr[ctx->currBuffer];
-      fprintf (stderr, "__ici_5_");
-      fflush (stderr);
-      struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) *value, vallen,
-                                            IBV_ACCESS_REMOTE_WRITE
-                                            | IBV_ACCESS_LOCAL_WRITE);
-      fprintf (stderr, "__ici_6_");
-      fflush (stderr);
-      ctx->mr[ctx->currBuffer] = (struct ibv_mr *) clientMR;
-      ctx->size = vallen;
-      fprintf (stderr, "__ici_7_");
-      fflush (stderr);
-      if (pp_post_send (ctx, IBV_WR_RDMA_READ, *value, get_packet->remote_addr, get_packet->rkey))
-        {
-          fprintf (stderr, "Error sending the packet");
-          return 1;
-        }
-      fprintf (stderr, "__ici_3_");
-      fflush (stderr);
-      if (pp_wait_completions (ctx, 1) != 0)
-        {
-          fprintf (stderr, "Error during completion");
-          return 1;
-        }
-      ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
-      ibv_dereg_mr (clientMR);
+    else {
+        // RENDEZVOUS PROTOCOL
+        fprintf (stderr, "__ici_4_rdv_");
+        fflush (stderr);
+        response = rendezvous_kv_get(kv_handle, key, value);
     }
-  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
-  return 0;
+    ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+    return response;
 }
 
 
