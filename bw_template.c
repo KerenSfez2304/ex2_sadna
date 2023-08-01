@@ -1466,19 +1466,88 @@ void run_tests (void *kv_handle)
   kv_close (kv_handle);
 }
 
-int run_server ()
+int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
-  void *kv_handle[NUM_CLIENT];
-  head = malloc (sizeof (struct keyNode));
-  // Connect all clients to server
+  head = (struct keyNode *) malloc (sizeof (struct keyNode));
+//  waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
+//  waiting_queue = NULL;
+  int free_b[NUM_CLIENT] = {0};
   for (int i = 0; i < NUM_CLIENT; i++)
     {
-      kv_open (NULL, &kv_handle[i]);
+      // todo (not really a todo): first free buffer for each client (each client has MAX_HANDLE_BUF(5) buffers
+      // so at the beginning for each client the first free buffer is the one
+      // with index 0 from the 5 buffers he has
+      clients_ctx[i]->size = sizeof( struct packet);
+      if (pp_post_recv (clients_ctx[i], 1) != 1)
+        {
+          fprintf (stderr, "Server couldn't receive the packet");
+          return 1;
+        }
     }
-  // Handle clients requests
-  handle_server ((struct pingpong_context **) kv_handle, NUM_CLIENT);
+
+  while (true)
+    {
+//      struct packetNode *curr = waiting_queue;
+//      while (curr != NULL)
+//        {
+//          if (!curr->node->writing)
+//            {
+//              server_handle_request (curr->ctx, curr->ctx->curr_buf);
+//              break;
+//            }
+//          curr = curr->next;
+//        }
+
+      for (int i = 0; i < NUM_CLIENT; i++)
+        {
+          struct ibv_wc wc[WC_BATCH];
+
+          int ne = ibv_poll_cq (clients_ctx[i]->cq, WC_BATCH, wc);
+
+          if (ne < 0)
+            {
+              fprintf (stderr, "Server couldn't poll from the CQ");
+              return 1;
+            }
+
+          if (ne >= 1)
+            {
+              handle_request (clients_ctx[i],
+                              (struct packet *) clients_ctx[i]->buf[free_b[i]],
+                              free_b[i]);
+//              server_handle_request (clients_ctx[i], free_b[i]);
+              // todo (not really a todo): update the current buffer of the
+              // client to be the next buffer
+              free_b[i] = (free_b[i] + 1)  % MAX_HANDLE_REQUESTS;
+              clients_ctx[i]->currBuffer = free_b[i];
+              receive_packet_async (clients_ctx[i]);
+//              clients_ctx[i]->size = sizeof(struct packet);
+//              if (pp_post_recv (clients_ctx[i], 1) != 1)
+//                {
+//                  fprintf (stderr, "Server couldn't receive the packet");
+//                  return 1;
+//                }
+            }
+        }
+    }
+  free (head);
   return 0;
 }
+
+
+//int run_server ()
+//{
+//  void *kv_handle[NUM_CLIENT];
+//  head = malloc (sizeof (struct keyNode));
+//  // Connect all clients to server
+//  for (int i = 0; i < NUM_CLIENT; i++)
+//    {
+//      kv_open (NULL, &kv_handle[i]);
+//    }
+//  // Handle clients requests
+//  handle_server ((struct pingpong_context **) kv_handle, NUM_CLIENT);
+//  return 0;
+//}
 
 int get_servername (char **servername, int argc, char **argv)
 {
@@ -1574,9 +1643,51 @@ int run_client (char * servername) {
   return 0;
 }
 
-int main(int argc, char **argv)
+//int main(int argc, char **argv)
+//{
+//  char *servername;
+//  get_servername(&servername, argc, argv);
+//  return servername ? run_client(servername) : run_server();
+//}
+
+int main (int argc, char *argv[])
 {
-  char *servername;
-  get_servername(&servername, argc, argv);
-  return servername ? run_client(servername) : run_server();
+  char *servername = NULL;
+  srand48 (getpid () * time (NULL));
+
+  argc_ = argc;
+  argv_ = argv;
+  if (optind == argc - 1 || optind == argc - 2)
+    servername = strdup (argv[optind]);
+  else if (optind < argc)
+    {
+      usage (argv[0]);
+      return 1;
+    }
+
+  if (servername)
+    { //client
+//      struct pingpong_context *kv_handle;
+//      if (kv_open (servername, (void **) &kv_handle))
+//        {
+//          fprintf (stderr, "Client failed to connect.");
+//          return 1;
+//        }
+      run_tests_one_client(servername);
+    }
+  else
+    { // server
+
+      struct pingpong_context *kv_handle[NUM_CLIENT];
+      for (int i = 0; i < NUM_CLIENT; i++)
+        {
+          if (kv_open (NULL, (void **) &kv_handle[i]))
+            {
+              fprintf (stderr, "Failed to connect client.");
+              return 1;
+            }
+        }
+      run_server (kv_handle);
+    }
+
 }
