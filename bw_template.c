@@ -1349,7 +1349,7 @@ int server_handle_get_request(struct pingpong_context *ctx, struct packet *pack,
                 return send_packet(ctx);
             }
             // EAGER PROTOCOL
-            fprintf(stderr, "_REAGER_\n");
+            fprintf(stderr, "_EAGER_\n");
             fflush(stderr);
             pack_response->protocol_type = 'e';
             strncpy(pack_response->value, curr->value, sizeof(pack_response->value));
@@ -1358,7 +1358,8 @@ int server_handle_get_request(struct pingpong_context *ctx, struct packet *pack,
         }
         curr = curr->next;
     }
-
+  fprintf(stderr, "_NOT FOUND_\n");
+  fflush(stderr);
     pack_response->protocol_type = 'e';
     strncpy(pack_response->value, "", sizeof(pack_response->value));
     ctx->currBuffer = buf_id;
