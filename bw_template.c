@@ -1036,10 +1036,12 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   fflush (stderr);
   fprintf (stderr, "avant send\n");
   fflush (stderr);
+  ctx->size = sizeof (struct packet);
   if (send_packet (ctx))
     {
       return 1;
     }
+  ctx->size = sizeof (struct packet);
   if (receive_packet (ctx))
     {
       return 1;
@@ -1060,7 +1062,7 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   fprintf (stderr, "after mr client\n");
   fflush (stderr);
   ctx->mr[ctx->currBuffer] = clientMR;
-//  ctx->size = size_value;
+  ctx->size = size_value;
   pp_post_send (ctx,
                 value,
                 pack_response->remote_addr,
