@@ -1051,7 +1051,14 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (char *) value,
                                         size_value, IBV_ACCESS_REMOTE_WRITE
                                                     | IBV_ACCESS_LOCAL_WRITE);
-
+  fprintf (stderr, "__");
+  fflush (stderr);
+  fprintf (stderr, pack->key);
+  fflush (stderr);
+  fprintf (stderr, "\n");
+  fflush (stderr);
+  fprintf (stderr, "after mr client\n");
+  fflush (stderr);
   ctx->mr[ctx->currBuffer] = clientMR;
 //  ctx->size = size_value;
   pp_post_send (ctx,
