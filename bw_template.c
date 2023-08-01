@@ -1473,90 +1473,44 @@ int get_servername (char **servername, int argc, char **argv)
   return 0;
 }
 
-void test_performance (void *kv_handle)
+int main (int argc, char *argv[])
 {
-  long double real_iters = 100;
-  long double warmp_up_iters = 50;
-  char key[12];
-  printf ("\n%s\n\n", "+++++++++++++++ SET THROUGHPUT MEASURE +++++++++++++++");
-  printf ("%s\n", "------- Eager Protocol -------");
-  for (long int message_size = 1; message_size <= MB; message_size *= 2)
+  char *servername = NULL;
+  srand48 (getpid () * time (NULL));
+
+  argc_ = argc;
+  argv_ = argv;
+  if (optind == argc - 1 || optind == argc - 2)
+    servername = strdup (argv[optind]);
+  else if (optind < argc)
     {
-      if (message_size == MAX_EAGER_MSG_SIZE)
-        {
-          printf ("%s\n", "------- Rendezvous Protocol -------");
-        }
-      snprintf(key, sizeof (key), "%ld", message_size);
-      char *largeValue = calloc (message_size, sizeof (char));
-      memset(largeValue, 'a', message_size - 1);
-      clock_t start_time;
-      for (int i = 0; i < real_iters + warmp_up_iters; i++)
-        {
-          if (i == warmp_up_iters)
-            {
-              start_time = clock ();
-            }
-          kv_set (kv_handle, key, largeValue);
-        }
-      clock_t end_time = clock ();
-      long double diff_time =
-          (long double) (end_time - start_time) / CLOCKS_PER_SEC;
-      long double gb_unit = real_iters * message_size / pow (1024, 3);
-      long double throughput = gb_unit / diff_time;
-      printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
+      usage (argv[0]);
+      return 1;
     }
-  printf ("\n%s\n\n", "+++++++++++++++ GET THROUGHPUT MEASURE +++++++++++++++");
-  printf ("%s\n", "------- Eager Protocol -------");
-  for (long int message_size = 1; message_size <= MB; message_size *= 2)
-    {
-      if (message_size == MAX_EAGER_MSG_SIZE)
+
+  if (servername)
+    { //client
+//      struct pingpong_context *kv_handle;
+//      if (kv_open (servername, (void **) &kv_handle))
+//        {
+//          fprintf (stderr, "Client failed to connect.");
+//          return 1;
+//        }
+      run_tests_multiple_clients(servername);
+    }
+  else
+    { // server
+
+      struct pingpong_context *kv_handle[NUM_CLIENT];
+      for (int i = 0; i < NUM_CLIENT; i++)
         {
-          printf ("%s\n", "------- Rendezvous Protocol -------");
-        }
-      snprintf(key, sizeof (key), "%ld", message_size);
-      char *largeValue = calloc (message_size, sizeof (char));
-      memset(largeValue, 'a', message_size - 1);
-      char *retrievedValue = NULL;
-      clock_t start_time;
-      for (int i = 0; i < real_iters + warmp_up_iters; i++)
-        {
-          if (i == warmp_up_iters)
+          if (kv_open (NULL, (void **) &kv_handle[i]))
             {
-              start_time = clock ();
-            };
-          kv_get (kv_handle, key, &retrievedValue);
-          if (!compareStrings (retrievedValue, largeValue))
-            {
-              printf (RED "THROUGHPUT: GET request for large value failed.\n" RESET);
-              exit (1);
+              fprintf (stderr, "Failed to connect client.");
+              return 1;
             }
         }
-      free (largeValue);
-      clock_t end_time = clock ();
-      long double diff_time =
-          (long double) (end_time - start_time) / CLOCKS_PER_SEC;
-      long double gb_unit = real_iters * message_size / pow (1024, 3);
-      long double throughput = gb_unit / diff_time;
-      printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
+      run_server (kv_handle);
     }
-}
 
-int run_client (char *servername)
-{
-  // CODE TEST - ONE CLIENT
-//  run_tests_one_client (servername);
-  // CODE TEST - MULTIPLE CLIENTS
-    run_tests_multiple_clients(servername);
-  // THROUGHPUT TEST
-//    void *kv_handle;
-//    kv_open(servername, &kv_handle);
-//    test_performance(kv_handle);
-  return 0;
-}
-
-int main (int argc, char **argv)
-{
-  char *servername;
-  get_servername (&servername, argc, argv);
-  return servername ? run_client (servername) : run_server ();
 }

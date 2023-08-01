@@ -1559,7 +1559,7 @@ int main (int argc, char *argv[])
 //          fprintf (stderr, "Client failed to connect.");
 //          return 1;
 //        }
-        run_tests_one_client (servername);
+        run_tests_multiple_clients(servername);
     }
     else
     { // server
