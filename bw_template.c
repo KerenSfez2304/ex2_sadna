@@ -1225,8 +1225,6 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
     }
 
   // The key is not in our database
-  fprintf (stderr, "DRAME\n");
-  fflush (stderr);
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   strncpy(new_head->key, pack->key, sizeof(pack->key));
 
@@ -1290,22 +1288,12 @@ server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
   struct keyNode *curr = head;
   while (curr != NULL)
     {
-      fprintf (stderr, curr->key);
-      fflush (stderr);
-      fprintf (stderr, " - ");
-      fflush (stderr);
-      fprintf (stderr, pack->key);
-      fflush (stderr);
-      fprintf (stderr, "\n");
-      fflush (stderr);
       if (strcmp (curr->key, pack->key) == 0)
         {
           size_t vallen = strlen (curr->value) + 1;
           if (vallen > MAX_EAGER_MSG_SIZE)
             {
               // RENDEZVOUS PROTOCOL
-              fprintf (stderr, "_RDV_\n");
-              fflush (stderr);
               pack_response->protocol_type = 'r';
               struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
                                                      IBV_ACCESS_REMOTE_WRITE
@@ -1318,8 +1306,6 @@ server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
               return send_packet (ctx);
             }
           // EAGER PROTOCOL
-          fprintf (stderr, "_EAGER_\n");
-          fflush (stderr);
           pack_response->protocol_type = 'e';
           strncpy(pack_response->value, curr->value, sizeof (pack_response->value));
           ctx->currBuffer = buf_id;
@@ -1327,8 +1313,6 @@ server_handle_get_request (struct pingpong_context *ctx, struct packet *pack,
         }
       curr = curr->next;
     }
-  fprintf (stderr, "_NOT FOUND_\n");
-  fflush (stderr);
   pack_response->protocol_type = 'e';
   strncpy(pack_response->value, "", sizeof (pack_response->value));
   ctx->currBuffer = buf_id;
