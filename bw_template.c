@@ -1270,8 +1270,8 @@ void handle_server_set_request_rendezvous(struct pingpong_context * ctx,
     // WAIT FOR FIN
     fprintf(stderr, "apres fin\n");
     fflush(stderr);
-//    curr->next = head;
-//    head = curr;
+    curr->next = head;
+    head = curr;
 }
 
 int server_handle_set_request(struct pingpong_context *ctx, struct packet *pack,
