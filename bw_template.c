@@ -1309,7 +1309,7 @@ int eager_kv_set (void *kv_handle, const char *key, const char *value)
   struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
   ctx->size = sizeof (struct packet);
   struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
-  pack->protocol_type = 'e';
+  pack->protocol = 'e';
   pack->request_type = 's';
   strncpy(pack->key, key, sizeof (pack->key));
   strncpy(pack->value, value, sizeof (pack->value));
