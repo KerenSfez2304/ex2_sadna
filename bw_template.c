@@ -1132,19 +1132,22 @@ int kv_get (void *kv_handle, const char *key, char **value)
       fprintf (stderr, "Error sending the get eager request");
       return 1;
     }
-
+  fprintf (stderr, "__ici_2a_");
+  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
       return 1;
     }
-
+  fprintf (stderr, "__ici_2b_");
+  fflush (stderr);
   if (pp_post_recv (ctx, 1) != 1)
     {
       fprintf (stderr, "Error receiving the get eager request");
       return 1;
     }
-
+  fprintf (stderr, "__ici_2c_");
+  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
