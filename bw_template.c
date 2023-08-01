@@ -1369,12 +1369,12 @@ int handle_server (struct pingpong_context *ctx[NUM_CLIENT], int number_of_clien
           struct ibv_wc wc[WC_BATCH];
           int ne = ibv_poll_cq (ctx[curr_client]->cq, WC_BATCH, wc);
 
-//          if (ne == 0)
-//            {
-//              fprintf (stderr, "\n__NOTHING TO POLL\n");
-//              fflush(stderr);
+          if (ne == 0)
+            {
+              fprintf (stderr, "\n__NOTHING TO POLL\n");
+              fflush(stderr);
 //              return 1;
-//            }
+            }
 
 
           if (ne < 0)
