@@ -1249,15 +1249,9 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
                                          IBV_ACCESS_REMOTE_WRITE
                                          | IBV_ACCESS_LOCAL_WRITE);
   pack->request_type = 's';
-  fprintf (stderr, "before acces mr\n");
-  fflush (stderr);
   pack->rkey = mr_create->rkey;
   pack->remote_addr = mr_create->addr;
-  fprintf (stderr, "after acces mr\n");
-  fflush (stderr);
   ctx->currBuffer = buf_id;
-  fprintf (stderr, "before send\n");
-  fflush (stderr);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Client couldn't post send.\n");
@@ -1269,8 +1263,6 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
       fprintf (stderr, "Error during completion");
       return 1;
     }
-  fprintf (stderr, "avant fin\n");
-  fflush (stderr);
   // WAIT FOR FIN
   ctx->size = 1;
   if (pp_post_recv (ctx, 1) != 1)
@@ -1278,16 +1270,12 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
       printf ("%d%s", 1, "Error server send");
       return 1;
     }
-  fprintf (stderr, "avant compl fin\n");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1))
     {
       printf ("%s", "Error completions");
       return 1;
     }
   // WAIT FOR FIN
-  fprintf (stderr, "apres fin\n");
-  fflush (stderr);
   new_head->next = head;
   head = new_head;
 
