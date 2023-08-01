@@ -1267,11 +1267,11 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
     }
   fprintf (stderr, "server waits for completion of mr\n");
   fflush(stderr);
-  if (pp_wait_completions (ctx, 1) != 0)
-    {
-      fprintf (stderr, "Error during completion");
-      return 1;
-    }
+//  if (pp_wait_completions (ctx, 1) != 0)
+//    {
+//      fprintf (stderr, "Error during completion");
+//      return 1;
+//    }
   fprintf (stderr, "server waits for fin\n");
   fflush(stderr);
   // WAIT FOR FIN
