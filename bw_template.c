@@ -646,7 +646,7 @@ static int pp_post_send (struct pingpong_context *ctx,
   if (remote_ptr)
     {
       wr.wr.rdma.remote_addr = (uintptr_t) remote_ptr;
-      wr.wr.rdma.remote_key = remote_key;
+      wr.wr.rdma.rkey = remote_key;
     }
   int a = ibv_post_send (ctx->qp, &wr, &bad_wr);
   return a;
