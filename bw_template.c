@@ -662,8 +662,6 @@ int pp_wait_completions (struct pingpong_context *ctx, int iters)
 
       do
         {
-//          fprintf (stderr, ".");
-//          fflush(stderr);
           ne = ibv_poll_cq (ctx->cq, WC_BATCH, wc);
           if (ne < 0)
             {
@@ -874,23 +872,18 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   packet->remote_key = mr_create->rkey;
   packet->remote_addr = mr_create->addr;
 
-  fprintf (stderr, "server sends mr to client\n");
-  fflush (stderr);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Client couldn't post send.\n");
       return 1;
     }
-  fprintf (stderr, "server waits for completion of mr\n");
-  fflush (stderr);
   if (pp_wait_completions (ctx, 1) != 0)
     {
       fprintf (stderr, "Error during completion");
       return 1;
     }
-  fprintf (stderr, "server waits for fin\n");
-  fflush (stderr);
-  // WAIT FOR FIN
+
+  // wait for fin
   ctx->size = 1;
   if (pp_post_recv (ctx, 1) != 1)
     {
@@ -902,11 +895,9 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       printf ("%s", "Error completions");
       return 1;
     }
-  // WAIT FOR FIN
+
   new_head->next = head;
   head = new_head;
-  fprintf (stderr, "server got fin\n");
-  fflush (stderr);
   return 0;
 }
 
@@ -993,29 +984,19 @@ void server_handle_request (struct pingpong_context *ctx)
 //    }
   if (packet->protocol == 'e') //eager
     {
-      fprintf (stderr, "eager\n");
-      fflush (stderr);
       if (packet->request_type == 's') // eager-set
         {
-          fprintf (stderr, "set\n");
-          fflush (stderr);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
-          fprintf (stderr, "get\n");
-          fflush (stderr);
           server_handle_eager_get (ctx, packet);
         }
     }
   else // rdv
     {
-      fprintf (stderr, "rdv \n");
-      fflush (stderr);
       if (packet->request_type == 's') //rdv-set
         {
-          fprintf (stderr, "set\n");
-          fflush (stderr);
           server_handle_rdv_set (ctx, packet);
         }
     }
@@ -1205,30 +1186,15 @@ int helper_open (char *servername, int argc, char *argv[], struct pingpong_conte
   inet_ntop (AF_INET6, &my_dest.gid, gid, sizeof gid);
   if (servername)
     {
-      fprintf (stdout, "_____");
-      fflush (stdout);
-      fprintf (stdout, servername);
-      fflush (stdout);
-      fprintf (stdout, "_____");
-      fflush (stdout);
-    }
-  if (servername)
-    {
-      fprintf (stdout, "client");
-      fflush (stdout);
       rem_dest = pp_client_exch_dest (servername, port, &my_dest);
     }
   else
     {
-      fprintf (stdout, "server");
-      fflush (stdout);
       rem_dest = pp_server_exch_dest (ctx, ib_port, mtu, port, sl, &my_dest, gidx);
     }
 
   if (!rem_dest)
     {
-      fprintf (stdout, "errror??");
-      fflush (stdout);
       return 1;
     }
 
@@ -1276,8 +1242,6 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
     {
       return 1;
     }
-  fprintf (stderr, "client waits for mr from server\n");
-  fflush(stderr);
   if (receive_packet (ctx))
     {
       return 1;
@@ -1323,8 +1287,6 @@ int kv_set (void *kv_handle, const char *key, const char *value)
     }
   else
     {
-      fprintf (stderr, "re;");
-      fflush (stderr);
       if (kv_rdv_set (ctx, set_packet, key, value, keylen, vallen))
         {
           fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
@@ -1371,9 +1333,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
       fprintf (stderr, "Error during completion");
       return 1;
     }
-
-  fprintf (stderr, "__ici_3_");
-  fflush (stderr);
 
   int ret;
   if (get_packet->protocol == 'e')
