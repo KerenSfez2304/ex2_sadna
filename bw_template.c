@@ -1309,68 +1309,6 @@ int kv_close (void *kv_handle)
   return pp_close_ctx (kv_handle);
 }
 
-void handle_server_set_request_rendezvous (struct pingpong_context *ctx,
-                                           struct packet *pack, struct keyNode *packet_db, size_t buf_id)
-{
-
-  struct keyNode *curr = malloc (sizeof (struct keyNode));
-  fprintf (stderr, "deb\n");
-  fflush (stderr);
-  curr->value = calloc (pack->size, 1);
-  strcpy(curr->key, pack->key);
-  pack->protocol_type = 'r';
-  fprintf (stderr, "avant mr\n");
-  fflush (stderr);
-  struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, curr->value, pack->size,
-                                         IBV_ACCESS_REMOTE_WRITE
-                                         | IBV_ACCESS_LOCAL_WRITE);
-  fprintf (stderr, "apres mr\n");
-  fflush (stderr);
-  pack->request_type = 's';
-  pack->protocol_type = 'r';
-  fprintf (stderr, "avant acces mr\n");
-  fflush (stderr);
-  pack->rkey = mr_create->rkey;
-  pack->remote_addr = mr_create->addr;
-  fprintf (stderr, "apres acces mr\n");
-  fflush (stderr);
-  ctx->currBuffer = buf_id;
-  fprintf (stderr, "avant send\n");
-  fflush (stderr);
-  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
-    {
-      fprintf (stderr, "Client couldn't post send.\n");
-      return;
-    }
-
-  if (pp_wait_completions (ctx, 1) != 0)
-    {
-      fprintf (stderr, "Error during completion");
-      return;
-    }
-  fprintf (stderr, "avant fin\n");
-  fflush (stderr);
-  // WAIT FOR FIN
-  ctx->size = 1;
-  if (pp_post_recv (ctx, 1) != 1)
-    {
-      printf ("%d%s", 1, "Error server send");
-      return;
-    }
-  fprintf (stderr, "avant compl fin\n");
-  fflush (stderr);
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return;
-    }
-  // WAIT FOR FIN
-  fprintf (stderr, "apres fin\n");
-  fflush (stderr);
-  curr->next = head;
-  head = curr;
-}
-
 int
 server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
                            size_t buf_id)
@@ -1411,7 +1349,7 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
               printf ("%s", "Error completions");
               return 1;
             }
-          return 0;
+
         }
       curr = curr->next;
     }
@@ -1433,7 +1371,7 @@ server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
     }
   // RENDEZVOUS PROTOCOL
 //    handle_server_set_request_rendezvous(ctx, pack, NULL, buf_id);
-  new_head->value = calloc (pack->size, 1);
+  new_head->value = calloc (pack->size - 1, 1);
   pack->protocol_type = 'r';
   struct ibv_mr *mr_create = ibv_reg_mr (ctx->pd, new_head->value, pack->size,
                                          IBV_ACCESS_REMOTE_WRITE
