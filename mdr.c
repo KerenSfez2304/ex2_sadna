@@ -1028,14 +1028,12 @@ int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
   size_t size_value = strlen (value) + 1;
   pack->size = size_value;
   strcpy(pack->key, key);
-  ctx->size = sizeof (struct packet);
   if (send_packet (ctx))
     {
       return 1;
     }
   fprintf (stderr, "client waits for mr from server\n");
   fflush(stderr);
-  ctx->size = sizeof (struct packet);
   if (receive_packet (ctx))
     {
       return 1;

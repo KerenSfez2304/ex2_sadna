@@ -1250,15 +1250,15 @@ int kv_open (char *servername, void **kv_handle)
   return helper_open (servername, argc_, argv_, (struct pingpong_context **) kv_handle);
 }
 
-int eager_kv_set (void *kv_handle, const char *key, const char *value)
+int
+kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value, size_t keylen, size_t vallen)
 {
-  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
   ctx->size = sizeof (struct packet);
-  struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
-  pack->protocol = 'e';
-  pack->request_type = 's';
-  strncpy(pack->key, key, sizeof (pack->key));
-  strncpy(pack->value, value, sizeof (pack->value));
+  packet->protocol = 'e';
+  packet->request_type = 's';
+  strncpy(packet->key, key, keylen);
+  strncpy(packet->value, value, vallen);
+
   if (send_packet (ctx))
     {
       return 1;
@@ -1266,90 +1266,102 @@ int eager_kv_set (void *kv_handle, const char *key, const char *value)
   return 0;
 }
 
-int rendezvous_kv_set (void *kv_handle, const char *key, const char *value)
+int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char *key, const char *value, size_t keylen, size_t vallen)
 {
-  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
-  struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
-  pack->protocol = 'r';
-  pack->request_type = 's';
-  size_t size_value = strlen (value) + 1;
-  pack->value_lenght = size_value;
-  strcpy(pack->key, key);
-  ctx->size = sizeof (struct packet);
+  packet->protocol = 'r';
+  packet->request_type = 's';
+  packet->value_lenght = vallen + 1;
+  strcpy(packet->key, key);
+
   if (send_packet (ctx))
     {
       return 1;
     }
   fprintf (stderr, "client waits for mr from server\n");
-  fflush (stderr);
-  ctx->size = sizeof (struct packet);
+  fflush(stderr);
   if (receive_packet (ctx))
     {
       return 1;
     }
-  struct packet *pack_response = (struct packet *) ctx->buf[ctx->currBuffer];
+
   struct ibv_mr *ctxMR = (struct ibv_mr *) ctx->mr[ctx->currBuffer];
-  struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (char *) value,
-                                        size_value, IBV_ACCESS_REMOTE_WRITE
-                                                    | IBV_ACCESS_LOCAL_WRITE);
-  ctx->mr[ctx->currBuffer] = clientMR;
-  ctx->size = size_value;
-  fprintf (stderr, "client rdma write\n");
-  fflush (stderr);
-  pp_post_send (ctx,
-                value,
-                pack_response->remote_addr,
-                pack_response->remote_key,
-                IBV_WR_RDMA_WRITE);
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    };
+  struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) value, vallen + 1,
+                                        IBV_ACCESS_REMOTE_WRITE
+                                        | IBV_ACCESS_LOCAL_WRITE);
+
+  ctx->mr[ctx->currBuffer] = (struct ibv_mr *) clientMR;
+  ctx->size = vallen + 1;
+  pp_post_send (ctx, value, packet->remote_addr, packet->remote_key, IBV_WR_RDMA_WRITE);
+  pp_wait_completions (ctx, 1);
   ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
-  fprintf (stderr, "client sends fin\n");
-  fflush (stderr);
-  // ---- FIN (ACK TO SERVER) -----
+
+  /* Send FIN message */
   ctx->size = 1;
-  if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
-    {
-      printf ("%d%s", 1, "Error server send");
-      return 1;
-    }
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    }
-  // --------------------------
+//  packet->request_type = 'f';
+  pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
+  pp_wait_completions (ctx, 1);
   ibv_dereg_mr (clientMR);
   return 0;
 }
 
+
 int kv_set (void *kv_handle, const char *key, const char *value)
 {
-  fprintf (stderr, "_____");
-  fflush (stderr);
-  fprintf (stderr, key);
-  fflush (stderr);
-  fprintf (stderr, "_____\n");
-  fflush (stderr);
-  int response;
-  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
-  unsigned packet_size = strlen (key) + strlen (value);
-  if (packet_size < MAX_EAGER_MSG_SIZE)
+  struct pingpong_context *ctx = kv_handle;
+  struct packet *set_packet = (struct packet *) ctx->buf[ctx->currBuffer];
+
+  size_t keylen = strlen (key);
+  size_t vallen = strlen (value);
+  set_packet->value_lenght = vallen;
+  size_t packet_size = keylen + vallen;
+
+  if (packet_size <= MAX_EAGER_MSG_SIZE)
     {
-      // EAGER PROTOCOL
-      response = eager_kv_set (kv_handle, key, value);
+      if (kv_eager_set (ctx, set_packet, packet_size, key, value, keylen, vallen))
+        {
+          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
+          return 1;
+        }
     }
   else
     {
-      // RENDEZVOUS PROTOCOL
-      response = rendezvous_kv_set (kv_handle, key, value);
+      fprintf (stderr, "re;");
+      fflush (stderr);
+      if (kv_rdv_set (ctx, set_packet, key, value, keylen, vallen))
+        {
+          fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
+          return 1;
+        }
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
-  return response;
+
+  return 0;
 }
+
+//int kv_set (void *kv_handle, const char *key, const char *value)
+//{
+//  fprintf (stderr, "_____");
+//  fflush (stderr);
+//  fprintf (stderr, key);
+//  fflush (stderr);
+//  fprintf (stderr, "_____\n");
+//  fflush (stderr);
+//  int response;
+//  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
+//  unsigned packet_size = strlen (key) + strlen (value);
+//  if (packet_size < MAX_EAGER_MSG_SIZE)
+//    {
+//      // EAGER PROTOCOL
+//      response = eager_kv_set (kv_handle, key, value);
+//    }
+//  else
+//    {
+//      // RENDEZVOUS PROTOCOL
+//      response = rendezvous_kv_set (kv_handle, key, value);
+//    }
+//  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+//  return response;
+//}
 
 int kv_get (void *kv_handle, const char *key, char **value)
 {
@@ -1419,8 +1431,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
         }
       ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
       ibv_dereg_mr (clientMR);
-//      strcpy(*value, for_val);
-//      free (for_val);
       return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
