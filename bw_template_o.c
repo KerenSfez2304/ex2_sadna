@@ -1332,13 +1332,13 @@ void test_performance(void *kv_handle) {
 
 int run_client (char * servername) {
   // CODE TEST - ONE CLIENT
-  run_tests_one_client(servername);
+//  run_tests_one_client(servername);
   // CODE TEST - MULTIPLE CLIENTS
 //    run_tests_multiple_clients(servername);
-  // THROUGHPUT TEST
-//    void *kv_handle;
-//    kv_open(servername, &kv_handle);
-//    test_performance(kv_handle);
+   THROUGHPUT TEST
+    void *kv_handle;
+    kv_open(servername, &kv_handle);
+    test_performance(kv_handle);
   return 0;
 }
 
