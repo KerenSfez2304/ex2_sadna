@@ -1541,45 +1541,65 @@ void test_performance (void *kv_handle)
     }
 }
 
-int main (int argc, char *argv[])
-{
-  char *servername = NULL;
-  srand48 (getpid () * time (NULL));
-
-  argc_ = argc;
-  argv_ = argv;
-  if (optind == argc - 1 || optind == argc - 2)
-    servername = strdup (argv[optind]);
-  else if (optind < argc)
-    {
-      usage (argv[0]);
-      return 1;
-    }
-
-  if (servername)
-    { //client
-//      struct pingpong_context *kv_handle;
-//      if (kv_open (servername, (void **) &kv_handle))
+//int main (int argc, char *argv[])
+//{
+//  char *servername = NULL;
+//  srand48 (getpid () * time (NULL));
+//
+//  argc_ = argc;
+//  argv_ = argv;
+//  if (optind == argc - 1 || optind == argc - 2)
+//    servername = strdup (argv[optind]);
+//  else if (optind < argc)
+//    {
+//      usage (argv[0]);
+//      return 1;
+//    }
+//
+//  if (servername)
+//    { //client
+////      struct pingpong_context *kv_handle;
+////      if (kv_open (servername, (void **) &kv_handle))
+////        {
+////          fprintf (stderr, "Client failed to connect.");
+////          return 1;
+////        }
+//      run_tests_multiple_clients(servername);
+////      run_tests_one_client (servername);
+//    }
+//  else
+//    { // server
+//
+//      struct pingpong_context *kv_handle[NUM_CLIENT];
+//      for (int i = 0; i < NUM_CLIENT; i++)
 //        {
-//          fprintf (stderr, "Client failed to connect.");
-//          return 1;
+//          if (kv_open (NULL, (void **) &kv_handle[i]))
+//            {
+//              fprintf (stderr, "Failed to connect client.");
+//              return 1;
+//            }
 //        }
-      run_tests_multiple_clients(servername);
-//      run_tests_one_client (servername);
-    }
-  else
-    { // server
+//      run_server (kv_handle);
+//    }
+//
+//}
 
-      struct pingpong_context *kv_handle[NUM_CLIENT];
-      for (int i = 0; i < NUM_CLIENT; i++)
-        {
-          if (kv_open (NULL, (void **) &kv_handle[i]))
-            {
-              fprintf (stderr, "Failed to connect client.");
-              return 1;
-            }
-        }
-      run_server (kv_handle);
-    }
 
+int run_client (char * servername) {
+  // CODE TEST - ONE CLIENT
+//    run_tests_one_client(servername);
+  // CODE TEST - MULTIPLE CLIENTS
+  run_tests_multiple_clients(servername);
+  // THROUGHPUT TEST
+//    void *kv_handle;
+//    kv_open(servername, &kv_handle);
+//    test_performance(kv_handle);
+  return 0;
+}
+
+int main(int argc, char **argv)
+{
+  char *servername;
+  get_servername(&servername, argc, argv);
+  return servername ? run_client(servername) : run_server();
 }
