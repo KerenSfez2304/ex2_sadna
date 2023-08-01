@@ -1491,14 +1491,6 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
         for (int i = 0; i < NUM_CLIENT; i++)
         {
-            for (int j = 0; j < MAX_HANDLE_REQUESTS; j++) {
-                printf("%d\n", clients_ctx[i]->cq->async_events_completed);
-                fflush(stdout);
-                printf("%d\n", clients_ctx[i]->cq->cqe);
-                fflush(stdout);
-                printf("%d\n", clients_ctx[i]->cq->comp_events_completed);
-                fflush(stdout);
-            }
             struct ibv_wc wc[WC_BATCH];
 
             int ne = ibv_poll_cq (clients_ctx[i]->cq, WC_BATCH, wc);
