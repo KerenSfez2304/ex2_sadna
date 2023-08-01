@@ -1135,7 +1135,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
   if (get_packet->protocol_type == 'e')
     {
         *value = (char *) malloc (get_packet->size + 1);
-      strcpy(*value, get_packet->value);
+      strncpy(*value, get_packet->value, get_packet->size);
     }
   else
     { //rdv
@@ -1170,8 +1170,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
         }
       ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
       ibv_dereg_mr (clientMR);
-//
-      return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
