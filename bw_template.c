@@ -1563,7 +1563,7 @@ int main (int argc, char *argv[])
 
   if (servername)
     { //client
-//      struct pingpong_context *kv_handle;
+      struct pingpong_context *kv_handle;
 //      if (kv_open (servername, (void **) &kv_handle))
 //        {
 //          fprintf (stderr, "Client failed to connect.");
