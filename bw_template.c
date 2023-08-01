@@ -1100,8 +1100,9 @@ int kv_get(void *kv_handle, const char *key, char **value) {
         // EAGER PROTOCOL
         fprintf (stderr, "__ici_4_set_");
         fflush (stderr);
+
 //        response = eager_kv_get(value, response_pack);
-        *value = (char *) malloc (response_pack->size + 1);
+        *value = (char *) malloc (strlen(response_pack->value) + 1);
         strncpy(*value, response_pack->value, strlen(response_pack->value) + 1);
         response = 0;
     }
