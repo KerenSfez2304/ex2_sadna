@@ -1158,6 +1158,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
   fprintf (stderr, "__ici_3_");
   fflush (stderr);
 
+
   int ret;
   if (get_packet->protocol_type == 'e')
     {
@@ -1183,12 +1184,13 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ctx->size = vallen;
       fprintf (stderr, "__ici_7_");
       fflush (stderr);
+      //fin ?
       if (pp_post_send (ctx, *value, get_packet->remote_addr, get_packet->rkey, IBV_WR_RDMA_READ))
         {
           fprintf (stderr, "Error sending the packet");
           return 1;
         }
-      fprintf (stderr, "__ici_3_");
+      fprintf (stderr, "__ici_8_");
       fflush (stderr);
       if (pp_wait_completions (ctx, 1) != 0)
         {
@@ -1199,7 +1201,9 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ibv_dereg_mr (clientMR);
 //      strcpy(*value, for_val);
 //      free (for_val);
-      return 0;
+      fprintf (stderr, "__ici_9_");
+      fflush (stderr);
+//      return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
