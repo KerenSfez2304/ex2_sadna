@@ -1250,8 +1250,7 @@ int kv_open (char *servername, void **kv_handle)
   return helper_open (servername, argc_, argv_, (struct pingpong_context **) kv_handle);
 }
 
-int
-kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value, size_t keylen, size_t vallen)
+int kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t packet_size, const char *key, const char *value, size_t keylen, size_t vallen)
 {
   ctx->size = sizeof (struct packet);
   packet->protocol = 'e';
@@ -1304,22 +1303,6 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   return 0;
 }
 
-int eager_kv_set (void *kv_handle, const char *key, const char *value)
-{
-  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
-  ctx->size = sizeof (struct packet);
-  struct packet *pack = (struct packet *) ctx->buf[ctx->currBuffer];
-  pack->protocol = 'e';
-  pack->request_type = 's';
-  strncpy(pack->key, key, sizeof (pack->key));
-  strncpy(pack->value, value, sizeof (pack->value));
-  if (send_packet (ctx))
-    {
-      return 1;
-    }
-  return 0;
-}
-
 int kv_set (void *kv_handle, const char *key, const char *value)
 {
   struct pingpong_context *ctx = kv_handle;
@@ -1352,31 +1335,6 @@ int kv_set (void *kv_handle, const char *key, const char *value)
 
   return 0;
 }
-
-//int kv_set (void *kv_handle, const char *key, const char *value)
-//{
-//  fprintf (stderr, "_____");
-//  fflush (stderr);
-//  fprintf (stderr, key);
-//  fflush (stderr);
-//  fprintf (stderr, "_____\n");
-//  fflush (stderr);
-//  int response;
-//  struct pingpong_context *ctx = (struct pingpong_context *) kv_handle;
-//  unsigned packet_size = strlen (key) + strlen (value);
-//  if (packet_size < MAX_EAGER_MSG_SIZE)
-//    {
-//      // EAGER PROTOCOL
-//      response = eager_kv_set (kv_handle, key, value);
-//    }
-//  else
-//    {
-//      // RENDEZVOUS PROTOCOL
-//      response = rendezvous_kv_set (kv_handle, key, value);
-//    }
-//  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
-//  return response;
-//}
 
 int kv_get (void *kv_handle, const char *key, char **value)
 {
@@ -1613,13 +1571,14 @@ int main (int argc, char *argv[])
 
   if (servername)
     { //client
-//      struct pingpong_context *kv_handle;
-//      if (kv_open (servername, (void **) &kv_handle))
-//        {
-//          fprintf (stderr, "Client failed to connect.");
-//          return 1;
-//        }
-      run_tests_one_client (servername);
+      struct pingpong_context *kv_handle;
+      if (kv_open (servername, (void **) &kv_handle))
+        {
+          fprintf (stderr, "Client failed to connect.");
+          return 1;
+        }
+      test_performance(kv_handle);
+//      run_tests_one_client (servername);
     }
   else
     { // server
@@ -1637,3 +1596,8 @@ int main (int argc, char *argv[])
 
 }
 
+//todo: 1. waiting list
+// 2. send packet, receive packet
+// 3. free
+// 4. througput
+// 5. pdf
