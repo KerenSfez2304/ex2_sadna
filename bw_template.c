@@ -984,6 +984,8 @@ int server_handle_eager_get (
 
 void server_handle_request (struct pingpong_context *ctx)
 {
+  printf("Request type: %c\n ", packet->request_type);
+  fflush(stdout);
   struct packet *packet = ctx->buf[ctx->currBuffer];
   if (packet->request_type == 'f')
     {
