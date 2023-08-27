@@ -718,6 +718,8 @@ void set_status_non_active (struct packet *packet)
 
 struct keyNode *get_status_active (struct packet *packet)
 {
+  printf("In checking");
+  fflush(stdout);
   struct keyNode *curr = head;
   while (curr != NULL)
     {
