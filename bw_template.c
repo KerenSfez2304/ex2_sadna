@@ -1025,7 +1025,7 @@ int helper_open (char *servername, int argc, char *argv[], struct pingpong_conte
   struct pingpong_dest my_dest;
   struct pingpong_dest *rem_dest;
   char *ib_devname = NULL;
-  int port = 4793;
+  int port = 4792;
   int ib_port = 1;
   enum ibv_mtu mtu = IBV_MTU_2048;
   int rx_depth = 6000;
@@ -1578,7 +1578,7 @@ int main (int argc, char *argv[])
       struct pingpong_context *kv_handle[NUM_CLIENT];
       for (int i = 0; i < NUM_CLIENT; i++)
         {
-          if (kv_open (NULL, (void **) &kv_handle[i]))
+          if (kv_open (NULL, &kv_handle[i]))
             {
               fprintf (stderr, "Failed to connect client.");
               return 1;
