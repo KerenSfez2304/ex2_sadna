@@ -1499,11 +1499,6 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
               return 1;
             }
 
-            if (ne == 0) {
-                printf("No ne\n");
-
-              }
-
           if (ne >= 1)
             {
               struct packet* curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
@@ -1623,8 +1618,8 @@ int main (int argc, char *argv[])
 //          return 1;
 //        }
 //      compute_measurements(kv_handle);
-//      run_tests_one_client (servername);
-      run_tests_multiple_clients (servername);
+      run_tests_one_client (servername);
+//      run_tests_multiple_clients (servername);
     }
   else
     { // server
