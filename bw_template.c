@@ -1491,15 +1491,18 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
       for (int i = 0; i < NUM_CLIENT; i++)
         {
           struct ibv_wc wc[WC_BATCH];
-          printf("Before ibv\n");
           int ne = ibv_poll_cq (clients_ctx[i]->cq, WC_BATCH, wc);
-          printf("After ibv\n");
 
           if (ne < 0)
             {
               fprintf (stderr, "Server couldn't poll from the CQ");
               return 1;
             }
+
+            if (ne == 0) {
+                printf("No ne\n");
+
+              }
 
           if (ne >= 1)
             {
