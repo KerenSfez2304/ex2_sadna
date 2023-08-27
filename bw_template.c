@@ -725,7 +725,7 @@ struct keyNode *get_status_active (struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          printf(curr->active);
+          printf((const char *) curr->active);
           fflush(stdout);
           printf("\n");
           fflush(stdout);
