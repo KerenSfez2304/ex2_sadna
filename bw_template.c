@@ -1546,20 +1546,35 @@ void compute_measurements (void *kv_handle)
     }
 }
 
-int main (int argc, char *argv[])
-{
-  char *servername = NULL;
-  srand48 (getpid () * time (NULL));
-
+int get_servername(char ** servername, int argc, char **argv) {
   argc_ = argc;
   argv_ = argv;
   if (optind == argc - 1)
-    servername = strdup (argv[optind]);
-  else if (optind < argc)
-    {
-      usage (argv[0]);
+    *servername = strdup(argv[optind]);
+  else if (optind < argc) {
+      usage(argv[0]);
       return 1;
     }
+  return 0;
+}
+
+int main (int argc, char *argv[])
+{
+  char *servername = NULL;
+//  srand48 (getpid () * time (NULL));
+//
+//  argc_ = argc;
+//  argv_ = argv;
+//  if (optind == argc - 1)
+//    servername = strdup (argv[optind]);
+//  else if (optind < argc)
+//    {
+//      usage (argv[0]);
+//      return 1;
+//    }
+
+  get_servername(&servername, argc, argv);
+
 
 
   if (servername)
@@ -1616,11 +1631,11 @@ int run_client (char * servername) {
 //    test_performance(kv_handle);
   return 0;
 }
-//
-//int main(int argc, char **argv)
-//{
-//  char *servername;
-//  get_servername(&servername, argc, argv);
-//  return servername ? run_client(servername) : run_server_();
-//}
+
+int main(int argc, char **argv)
+{
+  char *servername;
+  get_servername(&servername, argc, argv);
+  return servername ? run_client(servername) : run_server_();
+}
 
