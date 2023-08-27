@@ -992,7 +992,8 @@ void server_handle_request (struct pingpong_context *ctx)
       set_status_non_active (packet);
       return;
     }
-
+  printf("BEFORE GET_ACTIVEs\n ");
+  fflush(stdout);
   struct keyNode *currNode = get_status_active (packet);
   printf("BEFORE IF\n ");
   fflush(stdout);
