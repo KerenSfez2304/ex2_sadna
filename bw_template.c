@@ -1481,7 +1481,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
               printf("%d\n", curr->node->active);
               fflush(stdout);
               server_handle_request (curr->ctx);
-              size_waiting_queue++;
+              size_waiting_queue--;
               break;
             }
           curr = curr->next;
@@ -1606,8 +1606,6 @@ int main (int argc, char *argv[])
 {
   char *servername = NULL;
   get_servername(&servername, argc, argv);
-
-
 
   if (servername)
     { //client
