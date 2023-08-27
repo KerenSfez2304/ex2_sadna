@@ -984,7 +984,6 @@ int server_handle_eager_get (
 void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->currBuffer];
-
   if (packet->request_type == 'f')
     {
       printf("FIN\n ");
@@ -992,7 +991,7 @@ void server_handle_request (struct pingpong_context *ctx)
       set_status_non_active (packet);
       return;
     }
-  printf("BEFORE GET_ACTIVEs\n ");
+  printf("BEFORE GET_ACTIVE\n ");
   fflush(stdout);
   struct keyNode *currNode = get_status_active (packet);
   printf("BEFORE IF\n ");
@@ -1445,7 +1444,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
   waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
-
+  waiting_queue = NULL;
 
   for (int i = 0; i < NUM_CLIENT; i++)
     {
