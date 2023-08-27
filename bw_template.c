@@ -99,6 +99,7 @@ int argc_;
 char **argv_;
 struct keyNode *head = NULL;
 struct packetNode *waiting_queue = NULL;
+size_t size_waiting_queue = 0;
 
 struct pingpong_context {
     struct ibv_context *context;
@@ -1006,6 +1007,7 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->node = currNode;
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
+      size_waiting_queue++;
       return;
     }
   printf("AFTER IF\n ");
@@ -1444,6 +1446,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 {
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
   waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
+  size_waiting_queue = 0;
 
   for (int i = 0; i < NUM_CLIENT; i++)
     {
@@ -1462,25 +1465,23 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-
-      if (curr->node == NULL) {
-          printf("%p\n", waiting_queue);
-          fflush(stdout);
-      }
-      while (curr != NULL)
-        {
-          printf("%p\n", waiting_queue);
-          fflush(stdout);
-
-          if (!curr->node->active)
+      if (size_waiting_queue > 0) {
+          while (curr != NULL)
             {
-              printf("%d\n", curr->node->active);
+              printf("%p\n", waiting_queue);
               fflush(stdout);
-              server_handle_request (curr->ctx);
-              break;
+
+              if (!curr->node->active)
+                {
+                  printf("%d\n", curr->node->active);
+                  fflush(stdout);
+                  server_handle_request (curr->ctx);
+                  size_waiting_queue++;
+                  break;
+                }
+              curr = curr->next;
             }
-          curr = curr->next;
-        }
+      }
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
