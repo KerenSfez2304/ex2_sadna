@@ -1465,26 +1465,23 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-      printf("siz waiting queue: %d\n", size_waiting_queue);
+      printf("size waiting queue: %d\n", size_waiting_queue);
       fflush(stdout);
-      if (size_waiting_queue > 0) {
+      for (int i=0; i<size_waiting_queue; i++) {
+          printf("%p\n", waiting_queue);
+          fflush(stdout);
 
-          while (curr != NULL)
+          if (!curr->node->active)
             {
-              printf("%p\n", waiting_queue);
+              printf("%d\n", curr->node->active);
               fflush(stdout);
-
-              if (!curr->node->active)
-                {
-                  printf("%d\n", curr->node->active);
-                  fflush(stdout);
-                  server_handle_request (curr->ctx);
-                  size_waiting_queue++;
-                  break;
-                }
-              curr = curr->next;
+              server_handle_request (curr->ctx);
+              size_waiting_queue++;
+              break;
             }
-      }
+          curr = curr->next;
+        }
+
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
