@@ -1614,14 +1614,14 @@ int main(int argc, char *argv[]){
   if (servername) //client
     {
       //check for a single client
-      void *kv_handle;
-      kv_open(servername, &kv_handle);
-//        run_tests(kv_handle);
-      run_throughput(kv_handle);
+//      void *kv_handle;
+//      kv_open(servername, &kv_handle);
+////        run_tests(kv_handle);
+//      run_throughput(kv_handle);
 //        run_tests_one_client(servername);
 
       // test many clients
-//        run_tests_multiple_clients(servername);
+        run_tests_multiple_clients(servername);
     }
   else{
       server();
