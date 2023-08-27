@@ -839,11 +839,11 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               printf ("%d%s", 1, "Error server send");
               return 1;
             }
-          if (pp_wait_completions (ctx, 1))
-            {
-              printf ("%s", "Error completions");
-              return 1;
-            }
+//          if (pp_wait_completions (ctx, 1))
+//            {
+//              printf ("%s", "Error completions");
+//              return 1;
+//            }
           return 0;
         }
       curr = curr->next;
@@ -879,11 +879,11 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       printf ("%d%s", 1, "Error server send");
       return 1;
     }
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    }
+//  if (pp_wait_completions (ctx, 1))
+//    {
+//      printf ("%s", "Error completions");
+//      return 1;
+//    }
 
   new_head->next = head;
   head = new_head;
@@ -1429,7 +1429,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ctx->size = 1;
       get_packet->request_type = 'f';
       pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
-      pp_wait_completions (ctx, 1);
+//      pp_wait_completions (ctx, 1);
       return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
@@ -1619,8 +1619,8 @@ int main (int argc, char *argv[])
 //          return 1;
 //        }
 //      compute_measurements(kv_handle);
-//      run_tests_one_client (servername);
-      run_tests_multiple_clients (servername);
+      run_tests_one_client (servername);
+//      run_tests_multiple_clients (servername);
     }
   else
     { // server
