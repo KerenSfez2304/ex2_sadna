@@ -1632,10 +1632,10 @@ int run_client (char * servername) {
   return 0;
 }
 
-int main(int argc, char **argv)
-{
-  char *servername;
-  get_servername(&servername, argc, argv);
-  return servername ? run_client(servername) : run_server_();
-}
+//int main(int argc, char **argv)
+//{
+//  char *servername;
+//  get_servername(&servername, argc, argv);
+//  return servername ? run_client(servername) : run_server_();
+//}
 
