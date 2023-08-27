@@ -987,6 +987,8 @@ void server_handle_request (struct pingpong_context *ctx)
 
   if (packet->request_type == 'f')
     {
+      printf("FIN\n ");
+      fflush(stdout);
       set_status_non_active (packet);
       return;
     }
@@ -1455,16 +1457,16 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
   while (true)
     {
-//      struct packetNode *curr = waiting_queue;
-//      while (curr != NULL)
-//        {
-//          if (!curr->node->active)
-//            {
-//              server_handle_request (curr->ctx);
-//              break;
-//            }
-//          curr = curr->next;
-//        }
+      struct packetNode *curr = waiting_queue;
+      while (curr != NULL)
+        {
+          if (!curr->node->active)
+            {
+              server_handle_request (curr->ctx);
+              break;
+            }
+          curr = curr->next;
+        }
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
