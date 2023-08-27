@@ -718,18 +718,22 @@ void set_status_non_active (struct packet *packet)
 
 struct keyNode *get_status_active (struct packet *packet)
 {
-  printf("In checking");
+  printf("In checking - ");
   fflush(stdout);
   struct keyNode *curr = head;
   while (curr != NULL)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
+          printf(curr->active);
+          fflush(stdout);
+          printf("\n");
+          fflush(stdout);
           return curr;
         }
       curr = curr->next;
     }
-  return curr;
+  return NULL;
 }
 
 static void usage (const char *argv0)
