@@ -838,11 +838,11 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               printf ("%d%s", 1, "Error server send");
               return 1;
             }
-//          if (pp_wait_completions (ctx, 1))
-//            {
-//              printf ("%s", "Error completions");
-//              return 1;
-//            }
+          if (pp_wait_completions (ctx, 1))
+            {
+              printf ("%s", "Error completions");
+              return 1;
+            }
           return 0;
         }
       curr = curr->next;
@@ -934,6 +934,11 @@ int server_handle_eager_get (
               if (pp_post_recv (ctx, 1) != 1)
                 {
                   printf ("%d%s", 1, "Error server send");
+                  return 1;
+                }
+              if (pp_wait_completions (ctx, 1))
+                {
+                  fprintf (stderr, "Error waiting for completion");
                   return 1;
                 }
               return 0;
