@@ -732,7 +732,10 @@ struct keyNode *get_status_active (struct packet *packet)
           fflush(stdout);
           printf("\n");
           fflush(stdout);
-          return curr;
+          if (curr->active)
+            return curr;
+          return NULL;
+
         }
       curr = curr->next;
     }
