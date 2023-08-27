@@ -1592,12 +1592,7 @@ void compute_measurements (void *kv_handle)
 int run_server_() {
   struct Database *database;
   void *kv_handle[2];
-  database = malloc(sizeof (struct Database));
-  database->map = malloc(sizeof(struct packet *) * 4);
-  for (int i = 0; i < 4; i++) {
-      database->map[i] = malloc(sizeof (struct packet));
-    }
-  database->capacity = 4;
+
   // Connect all clients to server
   for (int i = 0; i < NUM_CLIENT; i++) {
       kv_open(NULL, &kv_handle[i]);
@@ -1605,8 +1600,6 @@ int run_server_() {
   // Handle clients requests
   run_server((struct pingpong_context **) kv_handle);
 //  handle_server((struct pingpong_context **) kv_handle, database, NUMBER_OF_CLIENTS);
-  free(database->map);
-  free(database);
   return 0;
 }
 
