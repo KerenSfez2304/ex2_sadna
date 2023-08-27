@@ -997,8 +997,7 @@ void server_handle_request (struct pingpong_context *ctx)
   if (currNode)
     { // the status of the key-value is on active state
       struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
-      if (newQueue == NULL)
-        {
+      if (newQueue == NULL) {
           fprintf (stdout, "Fail allocating memory");
         }
       newQueue->ctx = ctx;
@@ -1007,6 +1006,9 @@ void server_handle_request (struct pingpong_context *ctx)
       waiting_queue = newQueue;
       return;
     }
+  printf("AFTER IF\n ");
+  fflush(stdout);
+
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
