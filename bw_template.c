@@ -1263,6 +1263,12 @@ int kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t pa
       fprintf (stderr, "Error sending packet");
       return 1;
     }
+    // no need
+  if (pp_wait_completions (ctx, 1))
+    {
+      fprintf (stderr, "Error waiting for completion");
+      return 1;
+    }
   return 0;
 }
 
