@@ -1010,7 +1010,7 @@ void server_handle_request (struct pingpong_context *ctx)
       size_waiting_queue++;
       return;
     }
-  printf("AFTER IF\n ");
+  printf("AFTER IF - %c\n ", packet->request_type);
   fflush(stdout);
 
   if (packet->protocol == 'e') //eager
