@@ -1466,8 +1466,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-      printf("size waiting queue: %d\n", size_waiting_queue);
-      fflush(stdout);
+//      printf("size waiting queue: %d\n", size_waiting_queue);
+//      fflush(stdout);
       for (int i=0; i<size_waiting_queue; i++) {
           printf("%p\n", waiting_queue);
           fflush(stdout);
