@@ -57,7 +57,7 @@
 #define WC_BATCH (1)
 #define MB 1048576L
 #define MAX_EAGER_MSG_SIZE 4096
-#define NUM_CLIENT 1
+#define NUM_CLIENT 2
 #define MAX_HANDLE_REQUESTS 5
 #define ITER_WARM_UP 6000
 
@@ -1569,8 +1569,9 @@ int main (int argc, char *argv[])
           fprintf (stderr, "Client failed to connect.");
           return 1;
         }
-      compute_measurements(kv_handle);
+//      compute_measurements(kv_handle);
 //      run_tests_one_client (servername);
+      run_tests_multiple_clients (servername);
     }
   else
     { // server
