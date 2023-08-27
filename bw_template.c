@@ -879,11 +879,11 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       printf ("%d%s", 1, "Error server send");
       return 1;
     }
-  if (pp_wait_completions (ctx, 1))
-    {
-      printf ("%s", "Error completions");
-      return 1;
-    }
+//  if (pp_wait_completions (ctx, 1))
+//    {
+//      printf ("%s", "Error completions");
+//      return 1;
+//    }
 
   new_head->next = head;
   head = new_head;
@@ -937,11 +937,11 @@ int server_handle_eager_get (
                   printf ("%d%s", 1, "Error server send");
                   return 1;
                 }
-              if (pp_wait_completions (ctx, 1))
-                {
-                  fprintf (stderr, "Error waiting for completion");
-                  return 1;
-                }
+//              if (pp_wait_completions (ctx, 1))
+//                {
+//                  fprintf (stderr, "Error waiting for completion");
+//                  return 1;
+//                }
               return 0;
             }
           else
@@ -1510,7 +1510,6 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
         }
     }
   free (head);
-
   free(waiting_queue);
   return 0;
 }
