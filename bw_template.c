@@ -84,7 +84,7 @@ struct packet {
 struct keyNode {
     char key[MAX_EAGER_MSG_SIZE];
     char *value;
-    bool writing;
+    bool active;
     struct keyNode *next;
 };
 
@@ -702,21 +702,21 @@ int pp_wait_completions (struct pingpong_context *ctx, int iters)
   return 0;
 }
 
-void set_status_non_writing (struct packet *packet)
+void set_status_non_active (struct packet *packet)
 {
   struct keyNode *curr = head;
   while (curr != NULL)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          curr->writing = false;
+          curr->active = false;
           return;
         }
       curr = curr->next;
     }
 }
 
-struct keyNode *get_status_writing (struct packet *packet)
+struct keyNode *get_status_active (struct packet *packet)
 {
   struct keyNode *curr = head;
   while (curr != NULL)
@@ -798,7 +798,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          curr->writing = true;
+          curr->active = true;
 //          free (curr->value);
           curr->value = calloc (vallen, 1);
           packet->protocol = 'r';
@@ -877,20 +877,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   return 0;
 }
 
-int
-server_handle_set_request (struct pingpong_context *ctx, struct packet *pack,
-                           size_t buf_id)
-{
-  if (pack->protocol == 'e')
-    {
-      return server_handle_eager_set (ctx, pack);
-    }
-  else
-    {
-      return server_handle_rdv_set (ctx, pack);
-    }
-}
-
 int server_handle_eager_get (
     struct pingpong_context *ctx,
     struct packet *packet)
@@ -908,6 +894,7 @@ int server_handle_eager_get (
           // save the size in the database
           if (vallen > MAX_EAGER_MSG_SIZE) // rdv
             {
+              curr->active = true;
               packet->protocol = 'r';
               mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
                                       IBV_ACCESS_REMOTE_WRITE
@@ -973,25 +960,26 @@ void server_handle_request (struct pingpong_context *ctx)
 {
   struct packet *packet = ctx->buf[ctx->currBuffer];
 
-//  if (packet->request_type == 'f')
-//    {
-//      set_status_non_writing (packet);
-//    }
+  if (packet->request_type == 'f')
+    {
+      set_status_non_active (packet);
+      return;
+    }
 
-//  struct keyNode *currNode = get_status_writing (packet);
-//  if (currNode)
-//    { // the status of the key-value is on writing state
-//      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
-//      if (newQueue == NULL)
-//        {
-//          fprintf (stdout, "Fail allocating memory");
-//        }
-//      newQueue->ctx = ctx;
-//      newQueue->node = currNode;
-//      newQueue->next = waiting_queue;
-//      waiting_queue = newQueue;
-//      return;
-//    }
+  struct keyNode *currNode = get_status_active (packet);
+  if (currNode)
+    { // the status of the key-value is on active state
+      struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
+      if (newQueue == NULL)
+        {
+          fprintf (stdout, "Fail allocating memory");
+        }
+      newQueue->ctx = ctx;
+      newQueue->node = currNode;
+      newQueue->next = waiting_queue;
+      waiting_queue = newQueue;
+      return;
+    }
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
@@ -1439,7 +1427,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 //      struct packetNode *curr = waiting_queue;
 //      while (curr != NULL)
 //        {
-//          if (!curr->node->writing)
+//          if (!curr->node->active)
 //            {
 //              server_handle_request (curr->ctx);
 //              break;
@@ -1474,6 +1462,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
         }
     }
   free (head);
+
   free(waiting_queue);
   return 0;
 }
@@ -1561,18 +1550,6 @@ int get_servername(char ** servername, int argc, char **argv) {
 int main (int argc, char *argv[])
 {
   char *servername = NULL;
-//  srand48 (getpid () * time (NULL));
-//
-//  argc_ = argc;
-//  argv_ = argv;
-//  if (optind == argc - 1)
-//    servername = strdup (argv[optind]);
-//  else if (optind < argc)
-//    {
-//      usage (argv[0]);
-//      return 1;
-//    }
-
   get_servername(&servername, argc, argv);
 
 
@@ -1602,40 +1579,7 @@ int main (int argc, char *argv[])
         }
       run_server (kv_handle);
     }
-
-}
-
-int run_server_() {
-  struct Database *database;
-  void *kv_handle[2];
-
-  // Connect all clients to server
-  for (int i = 0; i < NUM_CLIENT; i++) {
-      kv_open(NULL, &kv_handle[i]);
-    }
-  // Handle clients requests
-  run_server((struct pingpong_context **) kv_handle);
-//  handle_server((struct pingpong_context **) kv_handle, database, NUMBER_OF_CLIENTS);
-  return 0;
 }
 
 
-int run_client (char * servername) {
-  // CODE TEST - ONE CLIENT
-//    run_tests_one_client(servername);
-  // CODE TEST - MULTIPLE CLIENTS
-  run_tests_multiple_clients(servername);
-  // THROUGHPUT TEST
-//    void *kv_handle;
-//    kv_open(servername, &kv_handle);
-//    test_performance(kv_handle);
-  return 0;
-}
-
-//int main(int argc, char **argv)
-//{
-//  char *servername;
-//  get_servername(&servername, argc, argv);
-//  return servername ? run_client(servername) : run_server_();
-//}
 

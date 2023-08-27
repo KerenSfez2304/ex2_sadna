@@ -702,7 +702,7 @@ int pp_wait_completions (struct pingpong_context *ctx, int iters)
   return 0;
 }
 
-void set_status_non_writing (struct packet *packet)
+void set_status_non_active (struct packet *packet)
 {
   struct keyNode *curr = head;
   while (curr != NULL)
@@ -716,7 +716,7 @@ void set_status_non_writing (struct packet *packet)
     }
 }
 
-struct keyNode *get_status_writing (struct packet *packet)
+struct keyNode *get_status_active (struct packet *packet)
 {
   struct keyNode *curr = head;
   while (curr != NULL)
