@@ -1362,6 +1362,8 @@ int kv_get (void *kv_handle, const char *key, char **value)
   strncpy(get_packet->key, key, sizeof(get_packet->key));
 
   ctx->size = sizeof (struct packet);
+  printf ("SEND GET REQ\n");
+  fflush(stdout);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Error sending the get eager request");
