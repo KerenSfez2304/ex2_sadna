@@ -780,7 +780,6 @@ server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
 
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   new_head->value = (char *) malloc (sizeof (packet->value));
-  // todo: release this
   strncpy(new_head->key, packet->key, sizeof (packet->key));
   strncpy(new_head->value, packet->value, sizeof (packet->value));
   new_head->next = head;
@@ -841,7 +840,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
   new_head->value = calloc (packet->value_lenght, 1);
-  // todo: deal with the free
   packet->protocol = 'r';
   mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
                           IBV_ACCESS_REMOTE_WRITE
@@ -907,6 +905,7 @@ int server_handle_eager_get (
         {
 
           size_t vallen = strlen (curr->value) + 1;
+          // save the size in the database
           if (vallen > MAX_EAGER_MSG_SIZE) // rdv
             {
               packet->protocol = 'r';
@@ -1241,6 +1240,7 @@ int kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t pa
       fprintf (stderr, "Error sending packet");
       return 1;
     }
+    // no need
   if (pp_wait_completions (ctx, 1))
     {
       fprintf (stderr, "Error waiting for completion");
@@ -1352,8 +1352,8 @@ int kv_get (void *kv_handle, const char *key, char **value)
       return 1;
     }
 
+    // first recv after send
   ctx->size = sizeof (struct packet);
-
   if (pp_post_recv (ctx, 1) != 1)
     {
       fprintf (stderr, "Error receiving the get eager request");
@@ -1436,7 +1436,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
   while (true)
     {
-      struct packetNode *curr = waiting_queue;
+//      struct packetNode *curr = waiting_queue;
 //      while (curr != NULL)
 //        {
 //          if (!curr->node->writing)
@@ -1510,7 +1510,7 @@ void compute_measurements (void *kv_handle)
       long double throughput = gb_unit / diff_time;
       printf ("%ld\t%Lf\t%s\n", message_size, throughput, "Gigabytes/Second");
     }
-  fprintf (stdout, "___________ KV_GET THROUGHPUT ____________\n");
+  fprintf (stdout, "\n___________ KV_GET THROUGHPUT ____________\n");
   fprintf (stdout, "Eager Protocol\n");
   for (long int message_size = 1; message_size <= MB; message_size *= 2)
     {
@@ -1587,9 +1587,3 @@ int main (int argc, char *argv[])
     }
 
 }
-
-//todo: 1. waiting list
-// 3. free
-// 4. change the test_performance
-// 4. througput
-// 5. pdf
