@@ -1328,7 +1328,7 @@ int kv_set (void *kv_handle, const char *key, const char *value)
     {
       if (kv_eager_set (ctx, set_packet, packet_size, key, value, keylen, vallen))
         {
-          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
+//          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
           return 1;
         }
     }
@@ -1336,7 +1336,7 @@ int kv_set (void *kv_handle, const char *key, const char *value)
     {
       if (kv_rdv_set (ctx, set_packet, key, value, keylen, vallen))
         {
-          fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
+//          fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
           return 1;
         }
     }
