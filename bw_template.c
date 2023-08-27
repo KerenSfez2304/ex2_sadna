@@ -1471,6 +1471,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (!curr->node->active)
             {
+              printf("%d\n", curr->node->active);
+              fflush(stdout);
               server_handle_request (curr->ctx);
               break;
             }
