@@ -1441,6 +1441,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   head = (struct keyNode *) malloc (sizeof (struct keyNode));
   waiting_queue = (struct packetNode *) malloc (sizeof (struct packetNode));
 
+
   for (int i = 0; i < NUM_CLIENT; i++)
     {
       // todo (not really a todo): first free buffer for each client (each client has MAX_HANDLE_BUF(5) buffers
@@ -1459,12 +1460,15 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
     {
       struct packetNode *curr = waiting_queue;
 
-      if (curr == NULL) {
-          printf("%p\n", waiting_queue);
-          fflush(stdout);
-      }
+//      if (curr == NULL) {
+//          printf("%p\n", waiting_queue);
+//          fflush(stdout);
+//      }
       while (curr != NULL)
         {
+          printf("%p\n", waiting_queue);
+          fflush(stdout);
+
           if (!curr->node->active)
             {
               server_handle_request (curr->ctx);
