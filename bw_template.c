@@ -1611,8 +1611,8 @@ int main (int argc, char *argv[])
 //          return 1;
 //        }
 //      compute_measurements(kv_handle);
-      run_tests_one_client (servername);
-//      run_tests_multiple_clients (servername);
+//      run_tests_one_client (servername);
+      run_tests_multiple_clients (servername);
     }
   else
     { // server
