@@ -1497,6 +1497,9 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (ne >= 1)
             {
+              struct packet* curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
+              printf("%c\n", curr_->request_type);
+              fflush(stdout);
               server_handle_request (clients_ctx[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
               clients_ctx[i]->currBuffer =
