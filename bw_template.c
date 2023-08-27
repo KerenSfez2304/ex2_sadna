@@ -994,6 +994,8 @@ void server_handle_request (struct pingpong_context *ctx)
     }
 
   struct keyNode *currNode = get_status_active (packet);
+  printf("BEFORE IF\n ");
+  fflush(stdout);
   if (currNode)
     { // the status of the key-value is on active state
       struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
