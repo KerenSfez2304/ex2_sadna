@@ -1458,8 +1458,11 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-      printf("%p\n", waiting_queue);
-      fflush(stdout);
+
+      if (curr == NULL) {
+          printf("%p\n", waiting_queue);
+          fflush(stdout);
+      }
       while (curr != NULL)
         {
           if (!curr->node->active)
