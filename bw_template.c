@@ -832,11 +832,11 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               printf ("%d%s", 1, "Error server send");
               return 1;
             }
-          if (pp_wait_completions (ctx, 1))
-            {
-              printf ("%s", "Error completions");
-              return 1;
-            }
+//          if (pp_wait_completions (ctx, 1))
+//            {
+//              printf ("%s", "Error completions");
+//              return 1;
+//            }
           return 0;
         }
       curr = curr->next;
@@ -920,6 +920,14 @@ int server_handle_eager_get (
               if (pp_wait_completions (ctx, 1))
                 {
                   fprintf (stderr, "Error waiting for completion");
+                  return 1;
+                }
+
+              // WAIT FOR FIN
+              ctx->size = 1;
+              if (pp_post_recv (ctx, 1) != 1)
+                {
+                  printf ("%d%s", 1, "Error server send");
                   return 1;
                 }
               return 0;
@@ -1286,7 +1294,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
 
   /* Send FIN message */
   ctx->size = 1;
-//  packet->request_type = 'f';
+  packet->request_type = 'f';
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
   ibv_dereg_mr (clientMR);
@@ -1389,6 +1397,12 @@ int kv_get (void *kv_handle, const char *key, char **value)
         }
       ctx->mr[ctx->currBuffer] = (struct ibv_mr *) ctxMR;
       ibv_dereg_mr (clientMR);
+
+      /* Send FIN message */
+      ctx->size = 1;
+      get_packet->request_type = 'f';
+      pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
+      pp_wait_completions (ctx, 1);
       return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
