@@ -144,7 +144,9 @@ void testMultipleSetAndGet(void *kv_handle) {
             printf(GREEN "Test Case 5: GET request 2 successful.\n" RESET);
         } else {
             printf(RED "Test Case 5: GET request 2 failed.\n" RESET);
-        }
+            printf("expected: %s   actual:   %s", value2, retrievedValue2);
+
+          }
         kv_release(retrievedValue2);
     } else {
         printf(RED "Test Case 5: Connection failed.\n" RESET);
