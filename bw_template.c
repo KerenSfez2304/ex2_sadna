@@ -1008,6 +1008,8 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
       size_waiting_queue++;
+      printf("added to waiting queue\n");
+      fflush(stdout);
       return;
     }
   printf("AFTER IF - %c\n ", packet->request_type);
@@ -1616,10 +1618,8 @@ int main (int argc, char *argv[])
   else
     { // server
       struct pingpong_context *kv_handle[NUM_CLIENT];
-      for (int i = 0; i < NUM_CLIENT; i++)
-        {
-          if (kv_open (NULL, (void **) &kv_handle[i]))
-            {
+      for (int i = 0; i < NUM_CLIENT; i++) {
+          if (kv_open (NULL, (void **) &kv_handle[i])) {
               fprintf (stderr, "Failed to connect client.");
               return 1;
             }
