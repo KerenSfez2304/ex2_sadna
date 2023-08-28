@@ -719,20 +719,13 @@ void set_status_non_active (struct packet *packet)
 
 struct keyNode *get_status_active (struct packet *packet)
 {
-  printf("In checking - ");
+  printf("START get status active - ");
   fflush(stdout);
   struct keyNode *curr = head;
   while (curr != NULL)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-
-          printf("%d ", curr->active);
-          fflush(stdout);
-//          printf("key: %s   value: %s",curr->key, curr->value);
-//          fflush(stdout);
-          printf("\n");
-          fflush(stdout);
           if (curr->active)
             return curr;
           return NULL;
@@ -1514,7 +1507,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
           if (ne >= 1)
             {
               struct packet* curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-              printf("%c\n", curr_->request_type);
+              printf("%c key: %s  value: %s\n", curr_->request_type, curr_->key, curr_->value);
               fflush(stdout);
               server_handle_request (clients_ctx[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
