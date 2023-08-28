@@ -1478,7 +1478,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
       for (int i=0; i<size_waiting_queue; i++) {
 //          printf("Checking requests from waiting queue...  - ");
 //          fflush(stdout);
-
+          printf("%d ", size_waiting_queue);
+          fflush(stdout);
           if (!curr->node->active)
             {
               printf("Found inactive request\n");
