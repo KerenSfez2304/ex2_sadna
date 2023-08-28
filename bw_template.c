@@ -1490,7 +1490,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
             }
           curr = curr->next;
         }
-
+      printf("| ");
+      fflush(stdout);
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
