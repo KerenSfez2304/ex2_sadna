@@ -726,7 +726,7 @@ struct keyNode *get_status_active (struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          if (curr->active)
+          if (curr->active == true)
             return curr;
           return NULL;
 
@@ -846,6 +846,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
   new_head->value = calloc (packet->value_lenght, 1);
+  new_head->active = true;
   packet->protocol = 'r';
   mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
                           IBV_ACCESS_REMOTE_WRITE
