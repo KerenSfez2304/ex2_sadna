@@ -1525,7 +1525,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                   printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer-1);
                   curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
                   printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
-                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer + 1];
+                  curr_ = clients_ctx[i]->buf[(clients_ctx[i]->currBuffer + 1) % 5];
                   printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer+1);
                   fflush(stdout);
                   curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
