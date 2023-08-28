@@ -1519,8 +1519,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                   printf("%c key: %s\n", curr_->request_type, curr_->key);
                   fflush(stdout);
               } else if  (curr_->request_type == 'f') {
-                  clients_ctx[i]->currBuffer--;
-                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
+//                  clients_ctx[i]->currBuffer--;
+//                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
                   printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
                   fflush(stdout);
               } else {
