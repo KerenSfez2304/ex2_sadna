@@ -1321,7 +1321,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   /* Send FIN message */
   ctx->size = 1;
   packet->request_type = 'f';
-  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+//  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
   printf("sending FIN for key: %s    value: %s    buffer: %d\n", fin_packet->key, fin_packet->value, ctx->currBuffer);
   fflush(stdout);
@@ -1437,7 +1437,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       get_packet->request_type = 'f';
       pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
       pp_wait_completions (ctx, 1);
-      ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+//      ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
@@ -1518,10 +1518,15 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
               if (curr_->request_type == 'g') {
                   printf("%c key: %s\n", curr_->request_type, curr_->key);
                   fflush(stdout);
-              } else {
+              } else if  (curr_->request_type == 'f') {
+                  clients_ctx[i]->currBuffer--;
+                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
                   printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
                   fflush(stdout);
-              }
+              } else {
+            printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
+            fflush(stdout);
+          }
               server_handle_request (clients_ctx[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
               clients_ctx[i]->currBuffer =
