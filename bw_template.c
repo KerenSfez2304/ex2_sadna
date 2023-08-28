@@ -826,12 +826,12 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               return 1;
             }
           // WAIT FOR FIN
-          ctx->size = 1;
-          if (pp_post_recv (ctx, 1) != 1)
-            {
-              printf ("%d%s", 1, "Error server send");
-              return 1;
-            }
+//          ctx->size = 1;
+//          if (pp_post_recv (ctx, 1) != 1)
+//            {
+//              printf ("%d%s", 1, "Error server send");
+//              return 1;
+//            }
 //          if (pp_wait_completions (ctx, 1))
 //            {
 //              printf ("%s", "Error completions");
@@ -867,12 +867,12 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
     }
 
   // wait for fin
-  ctx->size = 1;
-  if (pp_post_recv (ctx, 1) != 1)
-    {
-      printf ("%d%s", 1, "Error server send");
-      return 1;
-    }
+//  ctx->size = 1;
+//  if (pp_post_recv (ctx, 1) != 1)
+//    {
+//      printf ("%d%s", 1, "Error server send");
+//      return 1;
+//    }
 //  if (pp_wait_completions (ctx, 1))
 //    {
 //      printf ("%s", "Error completions");
