@@ -854,6 +854,8 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   packet->request_type = 's';
   packet->remote_key = mr_create->rkey;
   packet->remote_addr = mr_create->addr;
+  new_head->next = head;
+  head = new_head;
 
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
@@ -878,9 +880,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
 //      printf ("%s", "Error completions");
 //      return 1;
 //    }
-
-  new_head->next = head;
-  head = new_head;
   return 0;
 }
 
