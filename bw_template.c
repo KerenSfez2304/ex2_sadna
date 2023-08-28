@@ -1010,7 +1010,7 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
       size_waiting_queue++;
-      printf("added to waiting queue\n");
+      printf("_____________%c added to waiting queue\n", packet->request_type);
       fflush(stdout);
       return;
     }
