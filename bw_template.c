@@ -845,7 +845,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   // Need to add the key in the database
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
-  new_head->value = calloc (packet->value_lenght, 1);
+  new_head->value = calloc (vallen, 1);
   new_head->active = true;
   packet->protocol = 'r';
   mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
