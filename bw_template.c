@@ -1329,6 +1329,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   printf("FIN sent\n");
   fflush(stdout);
   ibv_dereg_mr (clientMR);
+  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
 }
 
@@ -1436,7 +1437,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       get_packet->request_type = 'f';
       pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
       pp_wait_completions (ctx, 1);
-      return 0;
+      ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
