@@ -1322,7 +1322,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   ctx->size = 1;
   packet->request_type = 'f';
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
-  printf("sending FIN for key: %s    value: %s\n", fin_packet->key, fin_packet->value);
+  printf("sending FIN for key: %s    value: %s    buffer: %d\n", fin_packet->key, fin_packet->value, ctx->currBuffer);
   fflush(stdout);
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
@@ -1518,7 +1518,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                   printf("%c key: %s\n", curr_->request_type, curr_->key);
                   fflush(stdout);
               } else {
-                  printf("%c %c key: %s  value: %s\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value);
+                  printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
                   fflush(stdout);
               }
               server_handle_request (clients_ctx[i]);
