@@ -984,23 +984,27 @@ int server_handle_eager_get (
 
 void server_handle_request (struct pingpong_context *ctx)
 {
+  printf("START server_handle_request - ");
+  fflush(stdout);
   struct packet *packet = ctx->buf[ctx->currBuffer];
-  printf("Request type: %c\n ", packet->request_type);
+  printf("after packet - ");
   fflush(stdout);
   if (packet->request_type == 'f')
     {
-      printf("FIN\n ");
+      printf("FIN case\n");
       fflush(stdout);
       set_status_non_active (packet);
       return;
     }
-  printf("BEFORE GET_ACTIVE\n ");
+  printf("not FIN - ");
   fflush(stdout);
   struct keyNode *currNode = get_status_active (packet);
-  printf("BEFORE IF\n ");
+  printf("after getting status - ");
   fflush(stdout);
   if (currNode)
     { // the status of the key-value is on active state
+      printf("active - ");
+      fflush(stdout);
       struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
       if (newQueue == NULL) {
           fprintf (stdout, "Fail allocating memory");
@@ -1014,17 +1018,20 @@ void server_handle_request (struct pingpong_context *ctx)
       fflush(stdout);
       return;
     }
-  printf("AFTER IF - %c\n ", packet->request_type);
+  printf("non active - ");
   fflush(stdout);
-
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
         {
+          printf("server_handle_eager_set\n");
+          fflush(stdout);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
+          printf("server_handle_eager_get\n");
+          fflush(stdout);
           server_handle_eager_get (ctx, packet);
         }
     }
@@ -1032,6 +1039,8 @@ void server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') //rdv-set
         {
+          printf("server_handle_rdv_set\n");
+          fflush(stdout);
           server_handle_rdv_set (ctx, packet);
         }
     }
