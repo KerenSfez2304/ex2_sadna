@@ -710,6 +710,8 @@ void set_status_non_active (struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
+          printf("Changing status of key: %s\n", curr->key);
+          fflush(stdout);
           curr->active = false;
           return;
         }
