@@ -219,8 +219,11 @@ void run_tests_helper(void * kv_handle) {
     testSetAndGet(kv_handle);
     testGetNonExistentKey(kv_handle);
     testReleaseValueMemory(kv_handle);
+  sleep(1);
     testMultipleSetAndGet(kv_handle);
+  sleep(1);
     testLargeSetValue(kv_handle);
+  sleep(1);
 //    testZeroCopyBehavior(kv_handle);
 }
 
