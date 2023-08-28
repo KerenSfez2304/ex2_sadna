@@ -710,8 +710,6 @@ void set_status_non_active (struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          printf("Changing status of key: %s\n", curr->key);
-          fflush(stdout);
           curr->active = false;
           return;
         }
@@ -721,8 +719,6 @@ void set_status_non_active (struct packet *packet)
 
 struct keyNode *get_status_active (struct packet *packet)
 {
-  printf("START get status active - ");
-  fflush(stdout);
   struct keyNode *curr = head;
   while (curr != NULL)
     {
@@ -827,18 +823,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               fprintf (stderr, "Error waiting for completion");
               return 1;
             }
-          // WAIT FOR FIN
-//          ctx->size = 1;
-//          if (pp_post_recv (ctx, 1) != 1)"'f
-//            {
-//              printf ("%d%s", 1, "Error server send");
-//              return 1;
-//            }
-//          if (pp_wait_completions (ctx, 1))
-//            {
-//              printf ("%s", "Error completions");
-//              return 1;
-//            }
           return 0;
         }
       curr = curr->next;
@@ -869,19 +853,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       fprintf (stderr, "Error during completion");
       return 1;
     }
-
-  // wait for fin
-//  ctx->size = 1;
-//  if (pp_post_recv (ctx, 1) != 1)
-//    {
-//      printf ("%d%s", 1, "Error server send");
-//      return 1;
-//    }
-//  if (pp_wait_completions (ctx, 1))
-//    {
-//      printf ("%s", "Error completions");
-//      return 1;
-//    }
   return 0;
 }
 
@@ -926,12 +897,12 @@ int server_handle_eager_get (
                 }
 
               // WAIT FOR FIN
-              ctx->size = 1;
-              if (pp_post_recv (ctx, 1) != 1)
-                {
-                  printf ("%d%s", 1, "Error server send");
-                  return 1;
-                }
+//              ctx->size = 1;
+//              if (pp_post_recv (ctx, 1) != 1)
+//                {
+//                  printf ("%d%s", 1, "Error server send");
+//                  return 1;
+//                }
 //              if (pp_wait_completions (ctx, 1))
 //                {
 //                  fprintf (stderr, "Error waiting for completion");
@@ -979,27 +950,15 @@ int server_handle_eager_get (
 
 void server_handle_request (struct pingpong_context *ctx)
 {
-  printf("START server_handle_request - ");
-  fflush(stdout);
   struct packet *packet = ctx->buf[ctx->currBuffer];
-  printf("after packet - ");
-  fflush(stdout);
   if (packet->request_type == 'f')
     {
-      printf("FIN case\n");
-      fflush(stdout);
       set_status_non_active (packet);
       return;
     }
-  printf("not FIN - ");
-  fflush(stdout);
   struct keyNode *currNode = get_status_active (packet);
-  printf("after getting status - ");
-  fflush(stdout);
   if (currNode)
     { // the status of the key-value is on active state
-      printf("active - ");
-      fflush(stdout);
       struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
       if (newQueue == NULL) {
           fprintf (stdout, "Fail allocating memory");
@@ -1009,24 +968,16 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
       size_waiting_queue++;
-      printf(" added to waiting queue\n", packet->request_type);
-      fflush(stdout);
       return;
     }
-  printf("non active - ");
-  fflush(stdout);
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
         {
-          printf("server_handle_eager_set\n");
-          fflush(stdout);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
-          printf("server_handle_eager_get\n");
-          fflush(stdout);
           server_handle_eager_get (ctx, packet);
         }
     }
@@ -1034,8 +985,6 @@ void server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') //rdv-set
         {
-          printf("server_handle_rdv_set\n");
-          fflush(stdout);
           server_handle_rdv_set (ctx, packet);
         }
     }
@@ -1323,12 +1272,8 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   packet->request_type = 'f';
 //  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
-  printf("sending FIN for %c, key:  %s    value: %s    buffer: %d\n", fin_packet->request_type, fin_packet->key, fin_packet->value, ctx->currBuffer);
-  fflush(stdout);
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
-  printf("FIN sent\n");
-  fflush(stdout);
   ibv_dereg_mr (clientMR);
   return 0;
 }
@@ -1374,8 +1319,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
   strncpy(get_packet->key, key, sizeof(get_packet->key));
 
   ctx->size = sizeof (struct packet);
-  printf ("SEND GET REQ\n");
-  fflush(stdout);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Error sending the get eager request");
@@ -1480,25 +1423,15 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-//      printf("size waiting queue: %d\n", size_waiting_queue);
-//      fflush(stdout);
       for (int i=0; i<size_waiting_queue; i++) {
-//          printf("Checking requests from waiting queue...  - ");
-//          fflush(stdout);
-//          printf("%d ", size_waiting_queue);
-//          fflush(stdout);
           if (!curr->node->active)
             {
-              printf("Found inactive request\n");
-              fflush(stdout);
               server_handle_request (curr->ctx);
               size_waiting_queue--;
               break;
             }
           curr = curr->next;
         }
-//      printf("| ");
-//      fflush(stdout);
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
@@ -1514,19 +1447,6 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (ne >= 1)
             {
-              (struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-              if (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'g') {
-                  printf("%c key: %s\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key);
-                  fflush(stdout);
-              } else if  (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'f') {
-//                  clients_ctx[i]->currBuffer--;
-//                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
-                  fflush(stdout);
-                } else {
-            printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
-            fflush(stdout);
-          }
               server_handle_request (clients_ctx[i]);
               // todo (not really a todo): update the current buffer of the client to be the next buffer
               clients_ctx[i]->currBuffer =
