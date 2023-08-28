@@ -1515,7 +1515,7 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
                   printf("%c key: %s\n", curr_->request_type, curr_->key);
                   fflush(stdout);
               } else {
-                  printf("%c key: %s  value: %s\n", curr_->request_type, curr_->key, curr_->value);
+                  printf("%c %c key: %s  value: %s\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value);
                   fflush(stdout);
               }
               server_handle_request (clients_ctx[i]);
