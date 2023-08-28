@@ -1321,6 +1321,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   /* Send FIN message */
   ctx->size = 1;
   packet->request_type = 'f';
+  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
   printf("sending FIN for key: %s    value: %s    buffer: %d\n", fin_packet->key, fin_packet->value, ctx->currBuffer);
   fflush(stdout);
@@ -1329,7 +1330,6 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   printf("FIN sent\n");
   fflush(stdout);
   ibv_dereg_mr (clientMR);
-  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
 }
 
