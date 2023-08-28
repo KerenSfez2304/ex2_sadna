@@ -1514,23 +1514,17 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (ne >= 1)
             {
-              struct packet* curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-              if (curr_->request_type == 'g') {
-                  printf("%c key: %s\n", curr_->request_type, curr_->key);
+              (struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
+              if (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'g') {
+                  printf("%c key: %s\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key);
                   fflush(stdout);
-              } else if  (curr_->request_type == 'f') {
+              } else if  (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'f') {
 //                  clients_ctx[i]->currBuffer--;
 //                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer - 1];
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer-1);
-                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
-                  curr_ = clients_ctx[i]->buf[(clients_ctx[i]->currBuffer + 1) % 5];
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer+1);
+                  printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
                   fflush(stdout);
-                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
                 } else {
-            printf("%c %c key: %s  value: %s    buffer: %d\n", curr_->request_type, curr_->protocol, curr_->key, curr_->value, clients_ctx[i]->currBuffer);
+            printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
             fflush(stdout);
           }
               server_handle_request (clients_ctx[i]);
