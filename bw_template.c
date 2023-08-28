@@ -57,7 +57,7 @@
 #define WC_BATCH (1)
 #define MB 1048576L
 #define MAX_EAGER_MSG_SIZE 4096
-#define NUM_CLIENT 1
+#define NUM_CLIENT 2
 #define MAX_HANDLE_REQUESTS 5
 #define ITER_WARM_UP 6000
 
@@ -803,7 +803,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       if (strcmp (curr->key, packet->key) == 0)
         {
           curr->active = true;
-//          free (curr->value);
           curr->value = calloc (vallen, 1);
           packet->protocol = 'r';
           mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
@@ -896,18 +895,6 @@ int server_handle_eager_get (
                   return 1;
                 }
 
-              // WAIT FOR FIN
-//              ctx->size = 1;
-//              if (pp_post_recv (ctx, 1) != 1)
-//                {
-//                  printf ("%d%s", 1, "Error server send");
-//                  return 1;
-//                }
-//              if (pp_wait_completions (ctx, 1))
-//                {
-//                  fprintf (stderr, "Error waiting for completion");
-//                  return 1;
-//                }
               return 0;
             }
           else
@@ -1552,15 +1539,15 @@ int main (int argc, char *argv[])
 
   if (servername)
     { //client
-//      struct pingpong_context *kv_handle;
-//      if (kv_open (servername, (void **) &kv_handle))
-//        {
-//          fprintf (stderr, "Client failed to connect.");
-//          return 1;
-//        }
-//      compute_measurements(kv_handle);
+      struct pingpong_context *kv_handle;
+      if (kv_open (servername, (void **) &kv_handle))
+        {
+          fprintf (stderr, "Client failed to connect.");
+          return 1;
+        }
+      compute_measurements(kv_handle);
 //      run_tests_one_client (servername);
-      run_tests_multiple_clients (servername);
+//      run_tests_multiple_clients (servername);
     }
   else
     { // server
