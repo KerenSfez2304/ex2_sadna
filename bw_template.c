@@ -1008,7 +1008,7 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
       size_waiting_queue++;
-      printf("_____________%c added to waiting queue\n", packet->request_type);
+      printf(" added to waiting queue\n", packet->request_type);
       fflush(stdout);
       return;
     }
@@ -1478,8 +1478,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
       for (int i=0; i<size_waiting_queue; i++) {
 //          printf("Checking requests from waiting queue...  - ");
 //          fflush(stdout);
-          printf("%d ", size_waiting_queue);
-          fflush(stdout);
+//          printf("%d ", size_waiting_queue);
+//          fflush(stdout);
           if (!curr->node->active)
             {
               printf("Found inactive request\n");
@@ -1490,8 +1490,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
             }
           curr = curr->next;
         }
-      printf("| ");
-      fflush(stdout);
+//      printf("| ");
+//      fflush(stdout);
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
