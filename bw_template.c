@@ -827,7 +827,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
             }
           // WAIT FOR FIN
 //          ctx->size = 1;
-//          if (pp_post_recv (ctx, 1) != 1)
+//          if (pp_post_recv (ctx, 1) != 1)"'f
 //            {
 //              printf ("%d%s", 1, "Error server send");
 //              return 1;
@@ -845,7 +845,7 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
   // Need to add the key in the database
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
-  new_head->value = calloc (vallen, 1);
+  new_head->value = calloc (packet->value_lenght, 1);
   new_head->active = true;
   packet->protocol = 'r';
   mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
@@ -1432,7 +1432,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       ctx->size = 1;
       get_packet->request_type = 'f';
       pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
-//      pp_wait_completions (ctx, 1);
+      pp_wait_completions (ctx, 1);
       return 0;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
