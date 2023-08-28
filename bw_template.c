@@ -1320,8 +1320,12 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   /* Send FIN message */
   ctx->size = 1;
   packet->request_type = 'f';
+  printf("sending FIN\n");
+  fflush(stdout);
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
-//  pp_wait_completions (ctx, 1);
+  pp_wait_completions (ctx, 1);
+  printf("FIN sent\n");
+  fflush(stdout);
   ibv_dereg_mr (clientMR);
   return 0;
 }
