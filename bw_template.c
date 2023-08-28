@@ -1323,7 +1323,7 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   packet->request_type = 'f';
 //  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
-  printf("sending FIN for key: %s    value: %s    buffer: %d\n", fin_packet->key, fin_packet->value, ctx->currBuffer);
+  printf("sending FIN for %c, key:  %s    value: %s    buffer: %d\n", fin_packet->request_type, fin_packet->key, fin_packet->value, ctx->currBuffer);
   fflush(stdout);
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
