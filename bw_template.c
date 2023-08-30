@@ -1158,7 +1158,10 @@ int receive_packet_async(struct pingpong_context *ctx) {
 
 int handle_request(struct pingpong_context *ctx, struct Database *database, struct packet *pack, size_t buf_id) {
   switch (pack->request_type) {
-      return server_handle_get_request(ctx, pack, database, buf_id);
+      case SET:
+        return server_handle_set_request(ctx, pack, database, buf_id);
+      case GET:
+        return server_handle_get_request(ctx, pack, database, buf_id);
     }
 }
 
