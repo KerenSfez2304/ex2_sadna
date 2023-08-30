@@ -72,17 +72,17 @@ struct packet {
     char request_type;
     char protocol;
 
-    char key[MAX_EAGER_MSG_SIZE];
-    char value[MAX_EAGER_MSG_SIZE];
+    char *key;
+    char *value;
 
-    size_t value_lenght;
+    size_t value_length;
     uint32_t remote_key;
     void *remote_addr;
 
 };
 
 struct keyNode {
-    char key[MAX_EAGER_MSG_SIZE];
+    char *key;
     char *value;
     bool active;
     struct keyNode *next;
@@ -710,8 +710,6 @@ void set_status_non_active (struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-          printf("Changing status of key: %s\n", curr->key);
-          fflush(stdout);
           curr->active = false;
           return;
         }
@@ -721,8 +719,6 @@ void set_status_non_active (struct packet *packet)
 
 struct keyNode *get_status_active (struct packet *packet)
 {
-  printf("START get status active - ");
-  fflush(stdout);
   struct keyNode *curr = head;
   while (curr != NULL)
     {
@@ -779,7 +775,8 @@ server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
-//          free (curr->value);
+          free(curr->value);
+          curr->value = malloc(sizeof(packet->value));
           strncpy(curr->value, packet->value, sizeof (packet->value));
           return 0;
         }
@@ -787,6 +784,7 @@ server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
     }
 
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
+  new_head->key = (char *) malloc(sizeof (packet->key));
   new_head->value = (char *) malloc (sizeof (packet->value));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
   strncpy(new_head->value, packet->value, sizeof (packet->value));
@@ -795,20 +793,19 @@ server_handle_eager_set (struct pingpong_context *ctx, struct packet *packet)
   return 0;
 }
 
-int
-server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
+int server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
 {
   struct keyNode *curr = head;
   size_t keylen = strlen (packet->key) + 1;
-  size_t vallen = packet->value_lenght;
+  size_t vallen = packet->value_length;
   struct ibv_mr *mr_create;
   while (curr != NULL)
     {
       if (strcmp (curr->key, packet->key) == 0)
         {
           curr->active = true;
-//          free (curr->value);
-          curr->value = calloc (vallen, 1);
+          free(curr->value);
+          curr->value = malloc (vallen);
           packet->protocol = 'r';
           mr_create = ibv_reg_mr (ctx->pd, curr->value, vallen,
                                   IBV_ACCESS_REMOTE_WRITE
@@ -827,18 +824,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
               fprintf (stderr, "Error waiting for completion");
               return 1;
             }
-          // WAIT FOR FIN
-//          ctx->size = 1;
-//          if (pp_post_recv (ctx, 1) != 1)"'f
-//            {
-//              printf ("%d%s", 1, "Error server send");
-//              return 1;
-//            }
-//          if (pp_wait_completions (ctx, 1))
-//            {
-//              printf ("%s", "Error completions");
-//              return 1;
-//            }
           return 0;
         }
       curr = curr->next;
@@ -846,11 +831,12 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
 
   // Need to add the key in the database
   struct keyNode *new_head = (struct keyNode *) malloc (sizeof (struct keyNode));
+  new_head->key = (char *) malloc(sizeof (packet->key));
   strncpy(new_head->key, packet->key, sizeof (packet->key));
-  new_head->value = calloc (packet->value_lenght, 1);
+  new_head->value = malloc (sizeof(packet->value_length));
   new_head->active = true;
   packet->protocol = 'r';
-  mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_lenght,
+  mr_create = ibv_reg_mr (ctx->pd, new_head->value, packet->value_length,
                           IBV_ACCESS_REMOTE_WRITE
                           | IBV_ACCESS_LOCAL_WRITE);
   packet->request_type = 's';
@@ -869,19 +855,6 @@ server_handle_rdv_set (struct pingpong_context *ctx, struct packet *packet)
       fprintf (stderr, "Error during completion");
       return 1;
     }
-
-  // wait for fin
-//  ctx->size = 1;
-//  if (pp_post_recv (ctx, 1) != 1)
-//    {
-//      printf ("%d%s", 1, "Error server send");
-//      return 1;
-//    }
-//  if (pp_wait_completions (ctx, 1))
-//    {
-//      printf ("%s", "Error completions");
-//      return 1;
-//    }
   return 0;
 }
 
@@ -911,7 +884,7 @@ int server_handle_eager_get (
 
               packet->remote_addr = mr_create->addr;
               packet->remote_key = mr_create->rkey;
-              packet->value_lenght = vallen;
+              packet->value_length = vallen;
               key_exist = true;
               ctx->size = sizeof (struct packet);
               if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
@@ -925,18 +898,6 @@ int server_handle_eager_get (
                   return 1;
                 }
 
-              // WAIT FOR FIN
-              ctx->size = 1;
-              if (pp_post_recv (ctx, 1) != 1)
-                {
-                  printf ("%d%s", 1, "Error server send");
-                  return 1;
-                }
-//              if (pp_wait_completions (ctx, 1))
-//                {
-//                  fprintf (stderr, "Error waiting for completion");
-//                  return 1;
-//                }
               return 0;
             }
           else
@@ -979,27 +940,15 @@ int server_handle_eager_get (
 
 void server_handle_request (struct pingpong_context *ctx)
 {
-  printf("START server_handle_request - ");
-  fflush(stdout);
   struct packet *packet = ctx->buf[ctx->currBuffer];
-  printf("after packet - ");
-  fflush(stdout);
   if (packet->request_type == 'f')
     {
-      printf("FIN case\n");
-      fflush(stdout);
       set_status_non_active (packet);
       return;
     }
-  printf("not FIN - ");
-  fflush(stdout);
   struct keyNode *currNode = get_status_active (packet);
-  printf("after getting status - ");
-  fflush(stdout);
   if (currNode)
     { // the status of the key-value is on active state
-      printf("active - ");
-      fflush(stdout);
       struct packetNode *newQueue = (struct packetNode *) malloc (sizeof (struct packetNode));
       if (newQueue == NULL) {
           fprintf (stdout, "Fail allocating memory");
@@ -1009,24 +958,16 @@ void server_handle_request (struct pingpong_context *ctx)
       newQueue->next = waiting_queue;
       waiting_queue = newQueue;
       size_waiting_queue++;
-      printf(" added to waiting queue\n", packet->request_type);
-      fflush(stdout);
       return;
     }
-  printf("non active - ");
-  fflush(stdout);
   if (packet->protocol == 'e') //eager
     {
       if (packet->request_type == 's') // eager-set
         {
-          printf("server_handle_eager_set\n");
-          fflush(stdout);
           server_handle_eager_set (ctx, packet);
         }
       else // eager-get
         {
-          printf("server_handle_eager_get\n");
-          fflush(stdout);
           server_handle_eager_get (ctx, packet);
         }
     }
@@ -1034,8 +975,6 @@ void server_handle_request (struct pingpong_context *ctx)
     {
       if (packet->request_type == 's') //rdv-set
         {
-          printf("server_handle_rdv_set\n");
-          fflush(stdout);
           server_handle_rdv_set (ctx, packet);
         }
     }
@@ -1260,18 +1199,15 @@ int kv_eager_set (struct pingpong_context *ctx, struct packet *packet, size_t pa
   ctx->size = sizeof (struct packet);
   packet->protocol = 'e';
   packet->request_type = 's';
-  strncpy(packet->key, key, sizeof (packet->key));
-  strncpy(packet->value, value, sizeof (packet->value));
+  packet->key = malloc(keylen);
+  packet->value = malloc(vallen);
+  strncpy(packet->key, key, keylen);
+  strncpy(packet->value, value, vallen);
 
   ctx->size = sizeof (struct packet);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Error sending packet");
-      return 1;
-    }
-  if (pp_wait_completions (ctx, 1))
-    {
-      fprintf (stderr, "Error waiting for completion");
       return 1;
     }
   return 0;
@@ -1281,8 +1217,9 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
 {
   packet->protocol = 'r';
   packet->request_type = 's';
-  packet->value_lenght = vallen + 1;
-  strcpy(packet->key, key);
+  packet->value_length = vallen + 1;
+  packet->key = malloc(keylen);
+  strncpy(packet->key, key, keylen);
 
   ctx->size = sizeof (struct packet);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
@@ -1321,14 +1258,9 @@ int kv_rdv_set (struct pingpong_context *ctx, struct packet *packet, const char 
   /* Send FIN message */
   ctx->size = 1;
   packet->request_type = 'f';
-//  ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   struct packet* fin_packet = ctx->buf[ctx->currBuffer];
-  printf("sending FIN for %c, key:  %s    value: %s    buffer: %d\n", fin_packet->request_type, fin_packet->key, fin_packet->value, ctx->currBuffer);
-  fflush(stdout);
   pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
   pp_wait_completions (ctx, 1);
-  printf("FIN sent\n");
-  fflush(stdout);
   ibv_dereg_mr (clientMR);
   return 0;
 }
@@ -1340,14 +1272,14 @@ int kv_set (void *kv_handle, const char *key, const char *value)
 
   size_t keylen = strlen (key);
   size_t vallen = strlen (value);
-  set_packet->value_lenght = vallen;
+  set_packet->value_length = vallen;
   size_t packet_size = keylen + vallen;
 
   if (packet_size <= MAX_EAGER_MSG_SIZE)
     {
       if (kv_eager_set (ctx, set_packet, packet_size, key, value, keylen, vallen))
         {
-//          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
+          fprintf (stderr, "Client couldn't send eager set request. key: %s, value: %s\n", key, value);
           return 1;
         }
     }
@@ -1355,7 +1287,7 @@ int kv_set (void *kv_handle, const char *key, const char *value)
     {
       if (kv_rdv_set (ctx, set_packet, key, value, keylen, vallen))
         {
-//          fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
+          fprintf (stderr, "Client couldn't send rend set request. key: %s, value: %s\n", key, value);
           return 1;
         }
     }
@@ -1371,11 +1303,10 @@ int kv_get (void *kv_handle, const char *key, char **value)
 
   get_packet->protocol = 'e';
   get_packet->request_type = 'g';
-  strncpy(get_packet->key, key, sizeof(get_packet->key));
+  get_packet->key = malloc(sizeof(key));
+  strncpy(get_packet->key, key, sizeof(key));
 
   ctx->size = sizeof (struct packet);
-  printf ("SEND GET REQ\n");
-  fflush(stdout);
   if (pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND))
     {
       fprintf (stderr, "Error sending the get eager request");
@@ -1388,7 +1319,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
       return 1;
     }
 
-  // first recv after send
+    // first recv after send
   ctx->size = sizeof (struct packet);
   if (pp_post_recv (ctx, 1) != 1)
     {
@@ -1410,7 +1341,7 @@ int kv_get (void *kv_handle, const char *key, char **value)
     }
   else
     { //rdv
-      size_t vallen = get_packet->value_lenght;
+      size_t vallen = get_packet->value_length;
       *value = malloc (vallen);
       struct ibv_mr *ctxMR = ctx->mr[ctx->currBuffer];
       struct ibv_mr *clientMR = ibv_reg_mr (ctx->pd, (void *) *value, vallen,
@@ -1437,7 +1368,6 @@ int kv_get (void *kv_handle, const char *key, char **value)
       get_packet->request_type = 'f';
       pp_post_send (ctx, NULL, NULL, 0, IBV_WR_SEND);
       pp_wait_completions (ctx, 1);
-//      ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
     }
   ctx->currBuffer = (ctx->currBuffer + 1) % MAX_HANDLE_REQUESTS;
   return 0;
@@ -1480,25 +1410,15 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
   while (true)
     {
       struct packetNode *curr = waiting_queue;
-//      printf("size waiting queue: %d\n", size_waiting_queue);
-//      fflush(stdout);
       for (int i=0; i<size_waiting_queue; i++) {
-//          printf("Checking requests from waiting queue...  - ");
-//          fflush(stdout);
-//          printf("%d ", size_waiting_queue);
-//          fflush(stdout);
           if (!curr->node->active)
             {
-              printf("Found inactive request\n");
-              fflush(stdout);
               server_handle_request (curr->ctx);
               size_waiting_queue--;
               break;
             }
           curr = curr->next;
         }
-//      printf("| ");
-//      fflush(stdout);
 
       for (int i = 0; i < NUM_CLIENT; i++)
         {
@@ -1514,22 +1434,8 @@ int run_server (struct pingpong_context *clients_ctx[NUM_CLIENT])
 
           if (ne >= 1)
             {
-              if (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'g') {
-                  printf("%c key: %s\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key);
-                  fflush(stdout);
-                } else if  (((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type == 'f') {
-//                  clients_ctx[i]->currBuffer--;
-//                  curr_ = clients_ctx[i]->buf[clients_ctx[i]->currBuffer];
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
-                  fflush(stdout);
-                } else {
-                  printf("%c %c key: %s  value: %s    buffer: %d\n", ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->request_type, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->protocol, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->key, ((struct packet*) clients_ctx[i]->buf[clients_ctx[i]->currBuffer])->value, clients_ctx[i]->currBuffer);
-                  fflush(stdout);
-                }
               server_handle_request (clients_ctx[i]);
-              // todo (not really a todo): update the current buffer of the client to be the next buffer
-              clients_ctx[i]->currBuffer =
-                  (clients_ctx[i]->currBuffer + 1) % MAX_HANDLE_REQUESTS;
+              clients_ctx[i]->currBuffer = (clients_ctx[i]->currBuffer + 1) % MAX_HANDLE_REQUESTS;
               clients_ctx[i]->size = sizeof (struct packet);
               if (pp_post_recv (clients_ctx[i], 1) != 1)
                 {
