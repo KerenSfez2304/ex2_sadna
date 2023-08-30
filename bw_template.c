@@ -58,7 +58,7 @@
 #define BITS_4_KB (4096)
 #define DATABASE_INITIAL_CAPACITY (4)
 #define DATABASE_FACTOR_CAPACITY (2)
-#define NUMBER_OF_CLIENTS (2)
+#define NUMBER_OF_CLIENTS (1)
 #define MAXIMUM_HANDLE_REQUESTS_BUFFERS (5)
 int MAXIMUM_HANDLE = MAXIMUM_HANDLE_REQUESTS_BUFFERS;
 
@@ -1332,9 +1332,9 @@ void test_performance(void *kv_handle) {
 
 int run_client (char * servername) {
   // CODE TEST - ONE CLIENT
-//    run_tests_one_client(servername);
+//  run_tests_one_client(servername);
   // CODE TEST - MULTIPLE CLIENTS
-//  run_tests_multiple_clients(servername);
+//    run_tests_multiple_clients(servername);
   // THROUGHPUT TEST
     void *kv_handle;
     kv_open(servername, &kv_handle);
