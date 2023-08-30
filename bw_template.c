@@ -1158,18 +1158,6 @@ int receive_packet_async(struct pingpong_context *ctx) {
 
 int handle_request(struct pingpong_context *ctx, struct Database *database, struct packet *pack, size_t buf_id) {
   switch (pack->request_type) {
-      case SET:
-        if (pack->protocol_type == EAGER) {
-            printf("New Set Request:\n\tKEY: %s\n\tVALUE: %s\n", pack->key, pack->value);
-          }
-        else {
-            printf("New Set Request:\n\tKEY: %s\n", pack->key);
-          }
-      fflush( stdout);
-      return server_handle_set_request(ctx, pack, database, buf_id);
-      case GET:
-        printf("New Get Request:\n\tKEY: %s\n", pack->key);
-      fflush( stdout);
       return server_handle_get_request(ctx, pack, database, buf_id);
     }
 }
@@ -1236,8 +1224,6 @@ void run_tests(void *kv_handle) {
   kv_get(kv_handle, long_key, &value);
   assert(strcmp(long_value, value) == 0);
   free(long_value);
-  printf("%s", "ALL TESTS PASSED!\n");
-  fflush(stdout);
   kv_release(value);
   kv_close(kv_handle);
 }
